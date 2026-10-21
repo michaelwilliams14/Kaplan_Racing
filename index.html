@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Sales Grand Prix - Driver Garage</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .glass { background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen p-3 md:p-6 pb-20">
+
+  <!-- Audio Synthesizer (Inlined) -->
+  <script>
+    class SoundFX {
+      constructor() { this.ctx = null; this.muted = false; }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.2) {
+        if (this.muted) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+      rev() {
+        if (this.muted) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(380, this.ctx.currentTime + 0.25);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.3);
+        } catch(e) {}
+      }
+      turbo() {
+        if (this.muted) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.35);
+          gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.4);
+        } catch(e) {}
+      }
+      win() {
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+          setTimeout(() => this.beep(freq, 'triangle', 0.25, 0.25), i * 120);
+        });
+      }
+    }
+    window.sfx = new SoundFX();
+  </script>
+
+  <!-- Store Engine (Inlined) -->
+  <script>
+    const DEFAULT_RULES = [
+      { id: 'kpi_3step', key: 'threeStep', name: 'Full 3-Step System', points: 150, category: 'kpi' },
+      { id: 'kpi_maintainer', key: 'maintainer', name: 'Maintainer Unit', points: 80, category: 'kpi' },
+      { id: 'kpi_strengthener', key: 'strengthener', name: 'Strengthener Unit', points: 80, category: 'kpi' },
+      { id: 'kpi_review', key: 'reviews', name: '5-Star Google Review', points: 40, category: 'kpi' },
+      { id: 'acc_general', key: 'accessories', name: 'Accessories & Add-ons', points: 30, category: 'acc' }
+    ];
+
+    const DEFAULT_STATE = {
+      managerPin: "2026",
+      campaign: "Monthly Sales Grand Prix",
+      sheetsUrl: "",
+      rules: DEFAULT_RULES,
+      racers: [
+        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Redline F1', color: '#ef4444', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 0, nos: 0 } },
+        { id: 'r2', name: 'Matt', pin: '2222', car: '🚗', carName: 'Turbo GT', color: '#3b82f6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, nos: 0 } },
+        { id: 'r3', name: 'Daryl', pin: '3333', car: '🚙', carName: 'Offroad Trophy', color: '#10b981', spentCredits: 0, upgrades: { topSpeed: 0, accel: 1, handling: 0, nos: 0 } },
+        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🚓', carName: 'Interceptor', color: '#f59e0b', spentCredits: 0, upgrades: { topSpeed: 0, accel: 0, handling: 1, nos: 0 } },
+        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎', carName: 'LeMans Pro', color: '#8b5cf6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 0, nos: 0 } }
+      ],
+      kpiSnapshot: {
+        heather: { threeStep: 8, maintainer: 4, strengthener: 3, reviews: 5, accessories: 14 },
+        matt: { threeStep: 6, maintainer: 3, strengthener: 2, reviews: 4, accessories: 10 },
+        daryl: { threeStep: 5, maintainer: 2, strengthener: 3, reviews: 3, accessories: 8 },
+        bonnie: { threeStep: 7, maintainer: 4, strengthener: 4, reviews: 6, accessories: 12 },
+        darris: { threeStep: 4, maintainer: 2, strengthener: 2, reviews: 3, accessories: 7 }
+      }
+    };
+
+    class GrandPrixStore {
+      constructor() {
+        this.cachedData = null;
+        this.listeners = [];
+      }
+      init(callback) {
+        if (callback) this.listeners.push(callback);
+        const raw = localStorage.getItem('grandprix_kpi_state');
+        if (raw) {
+          try { this.cachedData = JSON.parse(raw); } catch(e) { this.cachedData = DEFAULT_STATE; }
+        } else {
+          this.cachedData = DEFAULT_STATE;
+          this.saveLocal();
+        }
+        if (this.cachedData.sheetsUrl) {
+          this.syncFromGoogleSheet();
+          setInterval(() => this.syncFromGoogleSheet(), 30000);
+        }
+        this.notify();
+      }
+      saveLocal() {
+        localStorage.setItem('grandprix_kpi_state', JSON.stringify(this.cachedData));
+        this.notify();
+      }
+      notify() {
+        this.listeners.forEach(cb => {
+          try { cb(this.cachedData); } catch(e) { console.error(e); }
+        });
+      }
+      getState() {
+        return this.cachedData || DEFAULT_STATE;
+      }
+      getRacerCalculations(racer) {
+        const kpis = (this.cachedData.kpiSnapshot && this.cachedData.kpiSnapshot[racer.name.toLowerCase()]) || {
+          threeStep: 0, maintainer: 0, strengthener: 0, reviews: 0, accessories: 0
+        };
+        let totalPoints = 0;
+        let kpiCount = 0;
+        let accCount = 0;
+        this.cachedData.rules.forEach(rule => {
+          const units = Number(kpis[rule.key]) || 0;
+          totalPoints += units * rule.points;
+          if (rule.category === 'kpi') kpiCount += units;
+          else accCount += units;
+        });
+        const spent = Number(racer.spentCredits) || 0;
+        const availableCredits = Math.max(0, totalPoints - spent);
+        return { kpiCount, accCount, totalPoints, availableCredits, kpis };
+      }
+      async syncFromGoogleSheet() {
+        if (!this.cachedData.sheetsUrl) return false;
+        try {
+          const res = await fetch(this.cachedData.sheetsUrl);
+          const json = await res.json();
+          if (json && json.consultants) {
+            if (!this.cachedData.kpiSnapshot) this.cachedData.kpiSnapshot = {};
+            json.consultants.forEach(c => {
+              this.cachedData.kpiSnapshot[c.name.toLowerCase()] = c;
+            });
+            this.saveLocal();
+            return true;
+          }
+        } catch(err) {
+          console.warn("Sheet sync error:", err);
+        }
+        return false;
+      }
+    }
+    window.store = new GrandPrixStore();
+  </script>
+
+  <!-- Header -->
+  <header class="max-w-4xl mx-auto flex items-center justify-between py-3 mb-6 border-b border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-red-900/30">🏎️</div>
+      <div>
+        <h1 class="font-extrabold text-xl tracking-tight leading-none text-white">SALES <span class="text-red-500">GRAND PRIX</span></h1>
+        <p class="text-xs text-slate-400" id="campaignName">Consultant Garage Bay</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="logout()" id="logoutBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+        <i class="fa-solid fa-right-from-bracket mr-1"></i> Exit Garage
+      </button>
+      <a href="./manager.html" class="inline-flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition" title="Manager Command">
+        <i class="fa-solid fa-lock text-amber-400"></i> Manager Hub
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto">
+    <!-- AUTH VIEW -->
+    <div id="authView" class="max-w-md mx-auto py-8">
+      <div class="glass p-6 rounded-2xl shadow-2xl border border-slate-800">
+        <div class="text-center mb-6">
+          <div class="text-5xl mb-2">🏁</div>
+          <h2 class="text-2xl font-black text-white">Driver Login</h2>
+          <p class="text-xs text-slate-400 mt-1">Enter your 4-digit PIN to enter your private tuning garage</p>
+          <p class="text-[11px] text-amber-400/90 mt-1 font-mono">Demo PINs: Heather 1111 | Matt 2222 | Daryl 3333</p>
+        </div>
+
+        <div class="mb-5">
+          <div class="flex justify-center mb-4">
+            <input type="password" id="pinDisplay" maxlength="4" readonly class="w-48 text-center text-3xl font-mono tracking-widest py-2 bg-slate-950 border-2 border-red-500/50 rounded-xl text-white outline-none">
+          </div>
+          <div class="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+            <button onclick="pressKey('1')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">1</button>
+            <button onclick="pressKey('2')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">2</button>
+            <button onclick="pressKey('3')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">3</button>
+            <button onclick="pressKey('4')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">4</button>
+            <button onclick="pressKey('5')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">5</button>
+            <button onclick="pressKey('6')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">6</button>
+            <button onclick="pressKey('7')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">7</button>
+            <button onclick="pressKey('8')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">8</button>
+            <button onclick="pressKey('9')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">9</button>
+            <button onclick="clearPin()" class="py-3 bg-slate-900 hover:bg-slate-800 text-rose-400 font-bold text-sm rounded-xl">CLR</button>
+            <button onclick="pressKey('0')" class="py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xl rounded-xl">0</button>
+            <button onclick="submitPin()" class="py-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-lg rounded-xl"><i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+          <div id="authError" class="text-xs text-rose-500 text-center mt-3 hidden font-bold">Invalid Driver PIN.</div>
+        </div>
+
+        <div class="border-t border-slate-800/80 pt-4 text-center">
+          <button onclick="showRegisterModal()" class="text-xs text-amber-400 hover:text-amber-300 font-bold underline">
+            + Claim Driver Profile & Pick Car
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GARAGE BAY VIEW -->
+    <div id="garageView" class="hidden space-y-6">
+
+      <!-- Driver Vehicle Showcase -->
+      <div class="glass p-5 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-20 h-20 rounded-2xl bg-slate-950 flex items-center justify-center text-5xl border-4 shadow-xl" id="driverCarIcon" style="border-color: #ef4444;">
+            🏎️
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-2xl font-black text-white" id="driverName">Driver</h2>
+              <span id="driverCarBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">Redline F1</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Car & Upgrades customized in your garage</p>
+            <button onclick="openCarCustomizer()" class="text-[11px] text-amber-400 hover:underline mt-1 font-bold flex items-center gap-1">
+              <i class="fa-solid fa-paint-roller"></i> Change Car / Color
+            </button>
+          </div>
+        </div>
+
+        <!-- Available Credits to Spend -->
+        <div class="bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/30 p-4 rounded-xl flex items-center gap-3">
+          <div class="text-4xl text-amber-400">🪙</div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-amber-300 tracking-wider">Tuning Budget Available</div>
+            <div class="text-3xl font-black text-white" id="driverCredits">0</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Calculated from KPI figures</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="glass p-5 rounded-2xl border border-slate-800">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-table-cells text-emerald-400"></i> Your Store Sales & KPI Record (From Sheet)
+          </h3>
+          <span class="text-[11px] text-slate-400" id="syncStatus">Live Synced</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center" id="kpiStatsGrid"></div>
+      </div>
+
+      <!-- Performance Upgrades Bench -->
+      <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
+        <div>
+          <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-wrench text-amber-400"></i> Vehicle Tuning Bay
+          </h3>
+          <p class="text-xs text-slate-400">Spend your earned credits to level up parts for race day victory!</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="tuningShopGrid"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Car Customizer Modal -->
+  <div id="customizerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass w-full max-w-sm p-6 rounded-2xl border border-slate-800 space-y-4">
+      <h3 class="text-lg font-black text-white">Customize Your Vehicle</h3>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Vehicle Model</label>
+        <select id="editCarSelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm outline-none">
+          <option value="🏎️">🏎️ Redline Formula 1</option>
+          <option value="🚗">🚗 Twin-Turbo Sport GT</option>
+          <option value="🏎">🏎 LeMans Prototype</option>
+          <option value="🚙">🚙 Offroad Trophy Truck</option>
+          <option value="🚓">🚓 Interceptor Pursuit</option>
+          <option value="🚕">🚕 Aero Drift Tuner</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Livery / Accent Color</label>
+        <input type="color" id="editCarColor" class="w-full h-10 bg-slate-950 border border-slate-800 rounded-xl p-1 cursor-pointer">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeCarCustomizer()" class="px-4 py-2 text-xs text-slate-400">Cancel</button>
+        <button onclick="saveCarCustomization()" class="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 font-bold text-white rounded-xl">Save Setup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Modal -->
+  <div id="registerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass w-full max-w-md p-6 rounded-2xl border border-slate-800 space-y-4">
+      <h3 class="text-lg font-black text-white">Claim Driver Profile</h3>
+      <p class="text-xs text-slate-400">Match your name with the Google Sheet to link your sales credits.</p>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Your Name</label>
+        <input type="text" id="regName" placeholder="e.g. Heather, Matt, or your name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Set 4-Digit Garage PIN</label>
+        <input type="password" id="regPin" maxlength="4" placeholder="4 digits" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm font-mono tracking-widest">
+      </div>
+      <div id="regError" class="text-xs text-rose-500 font-bold hidden"></div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeRegisterModal()" class="px-4 py-2 text-xs text-slate-400">Cancel</button>
+        <button onclick="submitRegister()" class="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 font-bold text-white rounded-xl">Save & Enter Garage</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activeRacerId = null;
+    let pinBuffer = '';
+
+    const PART_SPECS = {
+      topSpeed: { name: 'Engine / V8', icon: '🚀', stat: 'Top Speed', costs: [100, 250, 450, 750] },
+      accel:    { name: 'Transmission', icon: '⚡', stat: 'Acceleration', costs: [80, 200, 400, 650] },
+      handling: { name: 'Grip Tires', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
+      nos:      { name: 'Nitrous NOS', icon: '💥', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
+    };
+    const TIERS = ['Stock', 'Sport', 'Pro', 'Super', 'Hyper'];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.store.init((state) => {
+        document.getElementById('campaignName').textContent = state.campaign || 'Driver Garage';
+        if (activeRacerId) renderGarage();
+      });
+    });
+
+    function pressKey(n) {
+      if (pinBuffer.length < 4) {
+        pinBuffer += n;
+        document.getElementById('pinDisplay').value = pinBuffer;
+        window.sfx.beep(550, 'sine', 0.05, 0.1);
+      }
+    }
+    function clearPin() {
+      pinBuffer = '';
+      document.getElementById('pinDisplay').value = '';
+    }
+
+    function submitPin() {
+      if (pinBuffer.length !== 4) return;
+      const state = window.store.getState();
+      const racer = state.racers.find(r => r.pin === pinBuffer);
+      if (!racer) {
+        document.getElementById('authError').classList.remove('hidden');
+        window.sfx.beep(180, 'square', 0.2, 0.2);
+        clearPin();
+        return;
+      }
+      activeRacerId = racer.id;
+      renderGarage();
+      document.getElementById('authView').classList.add('hidden');
+      document.getElementById('garageView').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+      window.sfx.rev();
+    }
+
+    function logout() {
+      activeRacerId = null;
+      clearPin();
+      document.getElementById('authView').classList.remove('hidden');
+      document.getElementById('garageView').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+      document.getElementById('authError').classList.add('hidden');
+    }
+
+    function renderGarage() {
+      const state = window.store.getState();
+      const racer = state.racers.find(r => r.id === activeRacerId);
+      if (!racer) return;
+
+      const calc = window.store.getRacerCalculations(racer);
+
+      document.getElementById('driverName').textContent = racer.name;
+      document.getElementById('driverCarIcon').textContent = racer.car;
+      document.getElementById('driverCarIcon').style.borderColor = racer.color;
+      document.getElementById('driverCarBadge').textContent = racer.carName;
+      document.getElementById('driverCredits').textContent = calc.availableCredits;
+
+      const statsGrid = document.getElementById('kpiStatsGrid');
+      statsGrid.innerHTML = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Full 3-Step</div>
+          <div class="text-xl font-black text-red-400">${calc.kpis.threeStep || 0}</div>
+        </div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Maintainers</div>
+          <div class="text-xl font-black text-amber-400">${calc.kpis.maintainer || 0}</div>
+        </div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Strengtheners</div>
+          <div class="text-xl font-black text-blue-400">${calc.kpis.strengthener || 0}</div>
+        </div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Accessories</div>
+          <div class="text-xl font-black text-emerald-400">${calc.kpis.accessories || 0}</div>
+        </div>
+      `;
+
+      const shopEl = document.getElementById('tuningShopGrid');
+      shopEl.innerHTML = '';
+
+      Object.keys(PART_SPECS).forEach(key => {
+        const part = PART_SPECS[key];
+        const lvl = racer.upgrades[key] || 0;
+        const isMax = lvl >= 4;
+        const nextCost = isMax ? null : part.costs[lvl];
+        const canAfford = !isMax && calc.availableCredits >= nextCost;
+
+        let pips = '';
+        for (let i = 0; i < 4; i++) {
+          pips += `<div class="h-1.5 flex-1 rounded-full ${i < lvl ? 'bg-amber-400 shadow-sm shadow-amber-500/50' : 'bg-slate-800'}"></div>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex flex-col justify-between";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-2xl">${part.icon}</span>
+              <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-300">${TIERS[lvl]}</span>
+            </div>
+            <div class="font-bold text-white text-sm">${part.name}</div>
+            <div class="text-[11px] text-slate-400 mb-2">${part.stat} (Lvl ${lvl}/4)</div>
+            <div class="flex gap-1 mb-4">${pips}</div>
+          </div>
+          <div>
+            ${isMax ? `
+              <div class="w-full py-2 bg-slate-800 text-slate-400 text-center font-bold text-xs rounded-lg">MAX LEVEL</div>
+            ` : `
+              <button onclick="buyUpgrade('${key}', ${nextCost})" class="w-full py-2 ${canAfford ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-500 cursor-not-allowed font-bold'} text-xs rounded-lg transition active:scale-95 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-arrow-up"></i> Install (${nextCost} 🪙)
+              </button>
+            `}
+          </div>
+        `;
+        shopEl.appendChild(card);
+      });
+    }
+
+    function buyUpgrade(partKey, cost) {
+      const state = window.store.getState();
+      const racer = state.racers.find(r => r.id === activeRacerId);
+      const calc = window.store.getRacerCalculations(racer);
+      if (!racer || calc.availableCredits < cost) return;
+
+      racer.spentCredits = (racer.spentCredits || 0) + cost;
+      if (!racer.upgrades[partKey]) racer.upgrades[partKey] = 0;
+      racer.upgrades[partKey] += 1;
+
+      window.sfx.turbo();
+      confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
+      window.store.saveLocal();
+    }
+
+    function openCarCustomizer() {
+      const state = window.store.getState();
+      const racer = state.racers.find(r => r.id === activeRacerId);
+      document.getElementById('editCarSelect').value = racer.car;
+      document.getElementById('editCarColor').value = racer.color;
+      document.getElementById('customizerModal').classList.remove('hidden');
+    }
+    function closeCarCustomizer() {
+      document.getElementById('customizerModal').classList.add('hidden');
+    }
+    function saveCarCustomization() {
+      const state = window.store.getState();
+      const racer = state.racers.find(r => r.id === activeRacerId);
+      const sel = document.getElementById('editCarSelect');
+      racer.car = sel.value;
+      racer.carName = sel.options[sel.selectedIndex].text.split(' ').slice(1).join(' ');
+      racer.color = document.getElementById('editCarColor').value;
+      window.store.saveLocal();
+      closeCarCustomizer();
+    }
+
+    function showRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
+    function closeRegisterModal() { document.getElementById('registerModal').classList.add('hidden'); }
+    function submitRegister() {
+      const name = document.getElementById('regName').value.trim();
+      const pin = document.getElementById('regPin').value.trim();
+      if (!name || pin.length !== 4) return;
+
+      const state = window.store.getState();
+      let racer = state.racers.find(r => r.name.toLowerCase() === name.toLowerCase());
+      if (racer) {
+        racer.pin = pin;
+      } else {
+        racer = {
+          id: 'r_' + Date.now(),
+          name: name,
+          pin: pin,
+          car: '🏎️',
+          carName: 'Redline F1',
+          color: '#ef4444',
+          spentCredits: 0,
+          upgrades: { topSpeed: 0, accel: 0, handling: 0, nos: 0 }
+        };
+        state.racers.push(racer);
+      }
+      window.store.saveLocal();
+      closeRegisterModal();
+      pinBuffer = pin;
+      submitPin();
+    }
+  </script>
+</body>
+</html>
