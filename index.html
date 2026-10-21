@@ -188,81 +188,125 @@
       const tiresLvl = upgrades.handling || 0;
       const nosLvl = upgrades.nos || 0;
 
-      // Tire compound color: White (Hard) -> Yellow (Medium) -> Red (Soft) -> Glowing Gold (Hyper)
-      const tireCompound = tiresLvl >= 3 ? '#ef4444' : (tiresLvl >= 1 ? '#eab308' : '#64748b');
-      const tireWidth = tiresLvl >= 2 ? '14' : '10';
-
-      // Rear Wing profile expands with aero level
+      const tireCompound = tiresLvl >= 3 ? '#ef4444' : (tiresLvl >= 1 ? '#eab308' : '#475569');
+      const tireWidth = tiresLvl >= 2 ? '14' : '11';
       const wingHeight = 12 + (aeroLvl * 4);
-      const wingColor = aeroLvl >= 3 ? '#eab308' : (aeroLvl >= 1 ? color : '#334155');
-
-      // Engine cowl heat & exhaust glow
-      const engineGlow = topSpeedLvl >= 3 ? '#f97316' : (topSpeedLvl >= 1 ? '#e2e8f0' : '#475569');
+      const wingColor = aeroLvl >= 3 ? '#eab308' : (aeroLvl >= 1 ? color : '#1e293b');
+      const engineGlow = topSpeedLvl >= 3 ? '#ff3e00' : (topSpeedLvl >= 1 ? '#cbd5e1' : '#334155');
 
       return `
-        <svg viewBox="0 0 160 60" width="${160 * scale}" height="${60 * scale}" class="inline-block transition-all duration-300">
+        <svg viewBox="0 0 160 60" width="${160 * scale}" height="${60 * scale}" class="inline-block transition-all duration-300 drop-shadow-lg">
           <defs>
-            <linearGradient id="bodyGrad_${color.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="bodyGrad_${color.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="20%">
               <stop offset="0%" stop-color="${color}" />
-              <stop offset="60%" stop-color="${color}" />
-              <stop offset="100%" stop-color="#0f172a" />
+              <stop offset="50%" stop-color="${color}" />
+              <stop offset="75%" stop-color="#1e1b4b" />
+              <stop offset="100%" stop-color="#020617" />
             </linearGradient>
-            <filter id="ersGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="glow"/>
-              <feComposite in="SourceGraphic" in2="glow" operator="over"/>
+            <linearGradient id="tireGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#111827" />
+              <stop offset="50%" stop-color="#030712" />
+              <stop offset="100%" stop-color="#111827" />
+            </linearGradient>
+            <pattern id="carbon" width="4" patternTransform="rotate(45 0 0)" height="4" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="4" stroke="#111" stroke-width="1.2" />
+            </pattern>
+            <filter id="ersGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feComponentTransfer in="blur" result="boost">
+                <feFuncA type="linear" slope="1.8"/>
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode in="boost"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <filter id="sparks" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="glow"/>
+              <feMerge>
+                <feMergeNode in="glow"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
             </filter>
           </defs>
 
-          <!-- DRS Rear Wing Upgrade -->
-          <g transform="translate(14, ${35 - wingHeight})">
-            <!-- Wing Endplates -->
-            <rect x="0" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
-            <rect x="22" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
-            <!-- Wing Aerofoil Planes -->
-            <rect x="2" y="2" width="22" height="4" fill="${wingColor}" rx="1"/>
-            ${aeroLvl >= 2 ? `<rect x="2" y="8" width="22" height="3" fill="#cbd5e1" rx="1"/>` : ''}
-            ${aeroLvl >= 3 ? `<rect x="4" y="0" width="18" height="2" fill="#ef4444" rx="0.5"/>` : ''}
+          <!-- Shadow -->
+          <ellipse cx="80" cy="48" rx="72" ry="7" fill="rgba(0,0,0,0.48)" />
+
+          <!-- Sparks & Exhaust Drift (Heat/Boost state) -->
+          ${(showFlames || nosLvl >= 2) ? `
+            <!-- Kinetic Ground sparks -->
+            <path d="M 12,46 L -10,48 L 5,45 M 8,46 L -6,47 L 2,45" stroke="#f59e0b" stroke-width="1.8" opacity="0.9" filter="url(#sparks)" stroke-dasharray="2,2"/>
+            <!-- Thermal thrust flame -->
+            <polygon points="12,38 -8,31 -2,38 -14,40 -2,42 -10,47 12,43" fill="#ff4500" opacity="0.85" filter="url(#ersGlow)" class="animate-pulse"/>
+            <polygon points="10,39 -2,34 2,39 -6,40 1,41 -4,45 10,42" fill="#fbbf24" opacity="0.9"/>
+          ` : `
+            <!-- Natural backdraft and track debris kickback -->
+            <path d="M 8,46 L -2,47 L 4,45" stroke="#f59e0b" stroke-width="1.2" opacity="0.3" stroke-dasharray="1,1"/>
+          `}
+
+          <!-- Ground-Effect Vent / Undertray -->
+          <path d="M 28,44 L 128,45 L 120,47 L 35,46 Z" fill="#0f172a" opacity="0.9" />
+
+          <!-- Rear DRS Aerodynamics -->
+          <g transform="translate(11, ${35 - wingHeight})">
+            <!-- Rear wing endplates -->
+            <rect x="0" y="0" width="4" height="${wingHeight + 11}" fill="#0a0f1d" rx="1.5"/>
+            <rect x="25" y="0" width="4" height="${wingHeight + 11}" fill="#0a0f1d" rx="1.5"/>
+            <!-- 3D Rear spoiler wing layers -->
+            <rect x="3" y="1" width="23" height="4" fill="${wingColor}" rx="1"/>
+            <rect x="3" y="7" width="23" height="2" fill="#111" rx="0.5" />
+            <!-- Spoiler sponsorship lettering -->
+            <line x1="5" y1="3" x2="24" y2="3" stroke="#fff" stroke-width="1" stroke-dasharray="2,2" opacity="0.8"/>
+            ${aeroLvl >= 2 ? `<path d="M 3,11 Q 12,13 25,11" stroke="#fbbf24" stroke-width="1.5" />` : ''}
           </g>
 
-          <!-- Rear Exhaust Flames & ERS Boost Glow -->
-          ${(showFlames || nosLvl >= 3) ? `
-            <polygon points="10,38 -2,35 6,40 -6,41 4,43 -1,45 10,42" fill="#f59e0b" filter="url(#ersGlow)" class="animate-pulse"/>
-            <polygon points="8,39 1,37 6,40 0,41 6,42 1,44 8,41" fill="#ef4444"/>
-          ` : ''}
+          <!-- Suspension linkages (Rear) -->
+          <line x1="28" y1="35" x2="38" y2="39" stroke="#334155" stroke-width="2.5"/>
+          <line x1="28" y1="43" x2="38" y2="40" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="34" cy="39" r="2" fill="#020617"/>
 
-          <!-- Rear Suspension Wishbones -->
-          <line x1="28" y1="36" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
-          <line x1="28" y1="44" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
+          <!-- Rear Heavy Tyre (High tread, compound stripe) -->
+          <rect x="20" y="21" width="${tireWidth}" height="32" rx="4.5" fill="url(#tireGrad)" stroke="#111827" stroke-width="1"/>
+          <rect x="20" y="21" width="1.5" height="32" fill="#374151" />
+          <!-- Pirelli Stripe -->
+          <path d="M ${20 + (Number(tireWidth)/2)},21 L ${20 + (Number(tireWidth)/2)},53" stroke="${tireCompound}" stroke-width="2.5" stroke-dasharray="5,2" />
+          <ellipse cx="${20 + Number(tireWidth)/2}" cy="37" rx="3.5" ry="5" fill="#020617" />
+          <circle cx="${20 + Number(tireWidth)/2}" cy="37" r="1.8" fill="#475569" />
 
-          <!-- Rear Wheels (P-Zero Racing Slicks) -->
-          <rect x="22" y="22" width="${tireWidth}" height="32" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="2"/>
-          <line x1="27" y1="28" x2="27" y2="48" stroke="#334155" stroke-width="1.5"/>
+          <!-- Main Engine Cover & Exhaust Pipes -->
+          <path d="M 28,40 Q 14,40 12,38 L 12,41 Q 14,43 28,43 Z" fill="#111" />
+          <!-- Detailed Sidepods, Vent, Heat outlets -->
+          <path d="M 36,40 Q 42,28 65,27 L 90,29 Q 115,31 143,40 L 138,44 Q 105,45 75,44 Q 50,45 36,42 Z" fill="url(#bodyGrad_${color.replace('#','')})"/>
+          <!-- Cockpit edge, Halo and aero-strakes -->
+          <path d="M 72,28 Q 78,16 93,25 L 86,28 Z" fill="#090d16" stroke="#475569" stroke-width="1.5"/>
+          <path d="M 72,26 Q 78,18 83,23 Z" fill="none" stroke="#fff" stroke-width="1.8" opacity="0.8" /> <!-- Halo Structure -->
+          <circle cx="80" cy="25" r="4.2" fill="#cbd5e1" stroke="#dc2626" stroke-width="1"/> <!-- Drivers Helmet -->
 
-          <!-- Main F1 Monocoque Chassis -->
-          <!-- Sidepods & Engine Cover -->
-          <path d="M 36,40 Q 45,30 65,28 L 95,29 Q 120,32 145,40 L 140,43 Q 110,44 75,44 Q 50,45 36,42 Z" fill="url(#bodyGrad_${color.replace('#','')})"/>
-          <!-- Halo Safety Cockpit Structure -->
-          <path d="M 72,28 Q 80,18 90,26 L 86,28 Z" fill="#020617" stroke="#94a3b8" stroke-width="1.5"/>
-          <!-- Driver Helmet -->
-          <circle cx="80" cy="27" r="4.5" fill="#f8fafc" stroke="#dc2626" stroke-width="1"/>
-          <!-- Airbox Intake (Above Driver) -->
-          <path d="M 66,28 L 74,20 L 78,28 Z" fill="${engineGlow}"/>
+          <!-- Side Intake sponsors -->
+          <rect x="48" y="34" width="24" height="4" fill="#020617" opacity="0.8" rx="1"/>
+          <text x="50" y="38" fill="#fff" font-size="3" font-family="monospace" font-weight="bold" opacity="0.8">GRAND PRIX</text>
 
-          <!-- Front Suspension Wishbones -->
-          <line x1="125" y1="40" x2="135" y2="35" stroke="#475569" stroke-width="2"/>
-          <line x1="125" y1="40" x2="135" y2="45" stroke="#475569" stroke-width="2"/>
+          <!-- Front suspension and camera strakes -->
+          <line x1="124" y1="40" x2="135" y2="34" stroke="#334155" stroke-width="2"/>
+          <line x1="124" y1="40" x2="135" y2="44" stroke="#1e293b" stroke-width="2"/>
 
-          <!-- Front Wheels (P-Zero Racing Slicks) -->
-          <rect x="122" y="26" width="${Math.max(8, Number(tireWidth)-2)}" height="26" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="1.8"/>
+          <!-- Front Tyre -->
+          <rect x="120" y="25" width="${Math.max(8, Number(tireWidth)-2.5)}" height="26" rx="3.5" fill="url(#tireGrad)" stroke="#111827" stroke-width="0.8"/>
+          <path d="M ${120 + (Math.max(8, Number(tireWidth)-2.5)/2)},25 L ${120 + (Math.max(8, Number(tireWidth)-2.5)/2)},51" stroke="${tireCompound}" stroke-width="2" stroke-dasharray="4,2" />
+          <ellipse cx="${120 + (Math.max(8, Number(tireWidth)-2.5)/2)}" cy="38" rx="2.5" ry="4" fill="#020617" />
+          <circle cx="${120 + (Math.max(8, Number(tireWidth)-2.5)/2)}" cy="38" r="1.2" fill="#475569" />
 
-          <!-- Multi-Element Front Aerodynamic Nosecone & Wing -->
-          <polygon points="140,39 158,40 156,43 138,42" fill="${wingColor}"/>
-          <path d="M 148,43 L 160,43 L 158,46 L 146,45 Z" fill="#0f172a"/>
-          ${aeroLvl >= 2 ? `<line x1="152" y1="38" x2="152" y2="45" stroke="#e2e8f0" stroke-width="1.5"/>` : ''}
+          <!-- Front wing assembly (Aero-plates, Endplates) -->
+          <polygon points="138,39 159,40 156,43 135,42" fill="${wingColor}"/>
+          <polygon points="144,43 158,43 156,46 142,45" fill="#0a0f1d" />
+          <!-- Endplate flaps -->
+          <rect x="156" y="36" width="3" height="10" fill="#0a0f1d" rx="0.5" />
+          ${aeroLvl >= 2 ? `<line x1="150" y1="38" x2="150" y2="45" stroke="#fbbf24" stroke-width="1.2" opacity="0.9"/>` : ''}
 
-          <!-- ERS Energy Ring Indicator -->
+          <!-- ERS Deploy Indicator Light -->
           ${nosLvl >= 1 ? `
-            <circle cx="58" cy="38" r="${3 + nosLvl}" fill="none" stroke="#38bdf8" stroke-width="1.5" class="ers-glow" stroke-dasharray="2,2"/>
+            <circle cx="58" cy="36" r="${3.5 + nosLvl}" fill="none" stroke="#38bdf8" stroke-width="1.8" class="ers-glow" stroke-dasharray="2,2"/>
           ` : ''}
         </svg>
       `;
@@ -330,6 +374,22 @@
 
     <!-- GARAGE BAY VIEW -->
     <div id="garageView" class="hidden space-y-6">
+
+      <!-- Cinematic Paddock Header Banner -->
+      <div class="glass rounded-2xl border border-slate-800 overflow-hidden relative shadow-2xl">
+        <div class="h-36 md:h-48 w-full relative">
+          <img src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&q=80&w=1200" alt="F1 Paddock" class="w-full h-full object-cover brightness-50 contrast-125">
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-transparent to-transparent"></div>
+          <div class="absolute bottom-3 left-4 md:left-5">
+            <span class="text-[9px] bg-red-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Paddock Bay Active</span>
+            <h2 class="text-xl md:text-2xl font-black text-white tracking-tight mt-1" id="paddockTitle">TEAM PIT GARAGE</h2>
+            <p class="text-[11px] text-slate-300 max-w-md">Every upgrade purchased with KPI credits physically mounts to your aerodynamic chassis in real time.</p>
+          </div>
+          <div class="absolute top-3 right-4 flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/60 px-2.5 py-1 rounded-lg text-[10px] font-mono text-emerald-400 font-bold">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> PIT WALL TELEMETRY ONLINE
+          </div>
+        </div>
+      </div>
 
       <!-- Dynamic Visual Vehicle Showcase (Evolves with upgrades!) -->
       <div class="glass p-6 rounded-2xl border border-slate-800 space-y-4">
@@ -501,21 +561,26 @@
       const visualStage = document.getElementById('carVisualStage');
       visualStage.innerHTML = generateF1CarSVG(racer.color || '#dc2626', racer.upgrades || {}, 2.2, false);
 
-      // 2. Render Spec Badges
+      // 2. Render Realistic F1 Spec Telemetry Readout
       const badgesEl = document.getElementById('carVisualSpecBadges');
       const up = racer.upgrades || {};
+      
+      const estTopSpeed = 315 + ((up.topSpeed || 0) * 12) + ((up.aero || 0) * 4);
+      const estLateralG = (4.0 + ((up.handling || 0) * 0.35) + ((up.aero || 0) * 0.25)).toFixed(1);
+      const estPower = 750 + ((up.topSpeed || 0) * 65) + ((up.nos || 0) * 40);
+
       badgesEl.innerHTML = `
-        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
-          ⚡ Engine: <b class="text-white">${up.topSpeed || 0}/4</b>
+        <span class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-gauge-high text-red-400"></i> Top Velocity: <b class="text-white font-mono">${estTopSpeed} km/h</b>
         </span>
-        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
-          🪽 Aero Wing: <b class="text-white">${up.aero || 0}/4</b>
+        <span class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-wind text-cyan-400"></i> Downforce: <b class="text-white font-mono">${estLateralG}G Lat</b>
         </span>
-        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
-          🛞 Slicks: <b class="text-white">${up.handling || 0}/4</b>
+        <span class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-bolt text-amber-400"></i> Hybrid Unit: <b class="text-white font-mono">${estPower} BHP</b>
         </span>
-        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
-          🔋 ERS Boost: <b class="text-white">${up.nos || 0}/4</b>
+        <span class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-battery-bolt text-emerald-400"></i> ERS Status: <b class="text-emerald-400 font-mono">${up.nos ? 'DEPLOY READY' : 'OFFLINE'}</b>
         </span>
       `;
 
