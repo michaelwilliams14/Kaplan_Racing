@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Grand Prix - Live Circuit Broadcast</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #06080e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow-x: hidden; }
+    .glass { background: rgba(12, 17, 29, 0.92); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .f1-font { font-family: 'Titillium Web', sans-serif, system-ui; }
+    @keyframes pulseYellow { 0%, 100% { background-color: rgba(234, 179, 8, 0.2); } 50% { background-color: rgba(234, 179, 8, 0.6); } }
+    .flag-yellow { animation: pulseYellow 0.8s infinite; }
+    @keyframes pulseRed { 0%, 100% { background-color: rgba(239, 68, 68, 0.2); } 50% { background-color: rgba(239, 68, 68, 0.7); } }
+    .flag-red { animation: pulseRed 0.6s infinite; }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between select-none">
+
+  <!-- Audio Synthesizer -->
+  <script>
+    class SoundFX {
+      constructor() { this.ctx = null; this.muted = false; }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.2) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+      rev() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(130, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(460, this.ctx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.35);
+        } catch(e) {}
+      }
+      screech() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(300, this.ctx.currentTime + 0.4);
+          gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.4);
+        } catch(e) {}
+      }
+      overtake() {
+        if (this.muted) return;
+        this.beep(420, 'triangle', 0.1, 0.15);
+        setTimeout(() => this.beep(780, 'triangle', 0.15, 0.18), 70);
+      }
+      crash() {
+        if (this.muted) return;
+        this.screech();
+        setTimeout(() => this.beep(120, 'square', 0.5, 0.35), 200);
+      }
+      win() {
+        [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, i) => {
+          setTimeout(() => this.beep(freq, 'triangle', 0.3, 0.3), i * 130);
+        });
+      }
+    }
+    window.sfx = new SoundFX();
+  </script>
+
+  <!-- Shared Store Engine -->
+  <script>
+    const DEFAULT_RULES = [
+      { id: 'kpi_3step', key: 'threeStep', name: 'Full 3-Step System', points: 150, category: 'kpi' },
+      { id: 'kpi_maintainer', key: 'maintainer', name: 'Maintainer Unit', points: 80, category: 'kpi' },
+      { id: 'kpi_strengthener', key: 'strengthener', name: 'Strengthener Unit', points: 80, category: 'kpi' },
+      { id: 'kpi_review', key: 'reviews', name: '5-Star Google Review', points: 40, category: 'kpi' },
+      { id: 'acc_general', key: 'accessories', name: 'Accessories & Add-ons', points: 30, category: 'acc' }
+    ];
+
+    const DEFAULT_PARTS = [
+      { id: 'topSpeed', name: 'MGU-K V6 Hybrid Engine', icon: '⚡', stat: 'Top Speed', costs: [100, 250, 450, 750] },
+      { id: 'accel', name: 'Seamless F1 Gearbox', icon: '⚙️', stat: 'Acceleration', costs: [80, 200, 400, 650] },
+      { id: 'handling', name: 'P-Zero Soft Racing Slicks', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
+      { id: 'aero', name: 'DRS Carbon Rear Wing', icon: '🪽', stat: 'Top Speed', costs: [100, 240, 420, 700] },
+      { id: 'nos', name: 'ERS Battery Deploy Boost', icon: '🔋', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
+    ];
+
+    const DEFAULT_STATE = {
+      managerPin: "2026",
+      campaign: "British Grand Prix - Silverstone Circuit",
+      rules: DEFAULT_RULES,
+      parts: DEFAULT_PARTS,
+      racers: [
+        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Scuderia Corsa', color: '#dc2626', spentCredits: 0, upgrades: { topSpeed: 2, accel: 1, handling: 2, aero: 2, nos: 1 } },
+        { id: 'r2', name: 'Matt', pin: '2222', car: '🏎️', carName: 'Silver Arrow', color: '#06b6d4', spentCredits: 0, upgrades: { topSpeed: 2, accel: 2, handling: 1, aero: 1, nos: 1 } },
+        { id: 'r3', name: 'Daryl', pin: '3333', car: '🏎️', carName: 'Papaya Speed', color: '#f97316', spentCredits: 0, upgrades: { topSpeed: 1, accel: 2, handling: 2, aero: 1, nos: 0 } },
+        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🏎️', carName: 'Aston British Racing', color: '#059669', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 2, aero: 1, nos: 1 } },
+        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎️', carName: 'Red Bull Prototype', color: '#2563eb', spentCredits: 0, upgrades: { topSpeed: 2, accel: 1, handling: 1, aero: 2, nos: 1 } }
+      ],
+      kpiSnapshot: {}
+    };
+
+    class GrandPrixStore {
+      constructor() {
+        this.cachedData = null;
+        this.loadImmediate();
+      }
+      loadImmediate() {
+        try {
+          const raw = localStorage.getItem('grandprix_kpi_state');
+          if (raw) {
+            this.cachedData = JSON.parse(raw);
+            if (!this.cachedData.racers) this.cachedData.racers = DEFAULT_STATE.racers;
+          } else {
+            this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
+          }
+        } catch(e) {
+          this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        }
+      }
+      getState() {
+        if (!this.cachedData) this.loadImmediate();
+        return this.cachedData;
+      }
+    }
+    window.store = new GrandPrixStore();
+  </script>
+
+  <!-- Top Navigation & Race Telemetry Header -->
+  <header class="p-3 md:px-6 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between z-30">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <span class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/40">F1</span>
+        <div>
+          <h1 class="font-black text-base md:text-lg tracking-wider text-white flex items-center gap-2">
+            SILVERSTONE CIRCUIT <span class="text-xs px-2 py-0.5 rounded bg-red-600 text-white font-mono">LIVE 4K</span>
+          </h1>
+          <p class="text-[11px] text-slate-400 font-mono">Full Grand Prix Championship • 5.891 km • 18 Turns</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Flag / Race Status Center -->
+    <div id="flagStatusBanner" class="hidden md:flex items-center gap-3 px-4 py-1.5 rounded-xl border border-slate-700 bg-slate-900/80">
+      <span id="flagIcon" class="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-ping"></span>
+      <span id="flagText" class="text-xs font-black font-mono tracking-widest text-emerald-400 uppercase">TRACK CLEAR • GREEN FLAG</span>
+    </div>
+
+    <!-- Navigation Hub Links -->
+    <div class="flex items-center gap-3">
+      <a href="./manager.html" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-sliders text-amber-400"></i> Command Hub
+      </a>
+      <a href="./index.html" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-warehouse text-red-500"></i> Garages
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Broadcast Viewport -->
+  <main class="relative flex-1 flex overflow-hidden">
+    
+    <!-- LEFT: F1 TV Live Leaderboard Timing Tower -->
+    <aside class="w-64 md:w-72 bg-slate-950/90 border-r border-slate-800/80 p-3 md:p-4 flex flex-col justify-between z-20 overflow-y-auto">
+      <div>
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2 font-mono text-xs font-black tracking-widest uppercase text-white">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span> POSITIONS
+          </div>
+          <span id="lapBadge" class="text-xs font-mono font-black text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded border border-amber-400/20">LAP 1/5</span>
+        </div>
+
+        <!-- Leaderboard Stack -->
+        <div id="timingTowerList" class="space-y-1.5"></div>
+      </div>
+
+      <!-- Race Track Telemetry Box -->
+      <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-[11px] font-mono">
+        <div class="flex justify-between text-slate-400">
+          <span>Speed Trap:</span>
+          <span id="speedTrapLeader" class="text-amber-400 font-bold">338.4 km/h</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>DRS Zones:</span>
+          <span class="text-emerald-400 font-bold">Wellington & Hangar</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Incident Risk:</span>
+          <span id="incidentRiskText" class="text-slate-300 font-bold">Moderate (Turns 3 & 9)</span>
+        </div>
+
+        <!-- Start / Re-run Race Button -->
+        <button onclick="initiateRaceCountdown()" id="startRaceBtn" class="w-full mt-3 py-3 bg-gradient-to-r from-red-600 via-amber-500 to-red-600 hover:from-red-500 hover:to-amber-400 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-red-900/30 transition active:scale-95 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-flag-checkered"></i> START GRAND PRIX
+        </button>
+      </div>
+    </aside>
+
+    <!-- CENTER & RIGHT: 2D Formula 1 Circuit Canvas (Silverstone Layout) -->
+    <section class="relative flex-1 bg-slate-950 flex flex-col justify-between overflow-hidden">
+      
+      <!-- 5 Red Lights Sequence Overlay -->
+      <div id="countdownBox" class="absolute top-6 left-1/2 -translate-x-1/2 z-40 hidden glass px-6 py-3 rounded-2xl flex items-center gap-4 border border-red-500/30 shadow-2xl">
+        <div id="light1" class="w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+        <div id="light2" class="w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+        <div id="light3" class="w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+        <div id="light4" class="w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+        <div id="light5" class="w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+      </div>
+
+      <!-- Track Name & Corner Watermark -->
+      <div class="absolute top-4 right-6 text-right pointer-events-none z-10 opacity-70">
+        <div class="text-2xl font-black text-white/20 tracking-widest font-mono">SILVERSTONE</div>
+        <div class="text-xs font-mono text-slate-500" id="currentSectorWatermark">SECTOR 1 • COPSE & BECKETTS</div>
+      </div>
+
+      <!-- Interactive Circuit Canvas -->
+      <div class="relative w-full h-full flex items-center justify-center p-2">
+        <canvas id="circuitCanvas" class="w-full h-full"></canvas>
+      </div>
+
+      <!-- Bottom Broadcast Ticker (Pit Radio & Live Incidents) -->
+      <footer class="p-3 bg-slate-950/95 border-t border-slate-800/90 flex items-center gap-3 z-20">
+        <div class="text-red-500 animate-pulse font-mono text-xs font-black uppercase flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-tower-broadcast"></i> Pit Radio:
+        </div>
+        <div id="radioTicker" class="text-xs text-slate-200 font-medium truncate flex-1 font-mono">
+          Cars on the formation grid. Track temperature 36°C. Standing by for FIA race director lights.
+        </div>
+        <div id="safetyCarBadge" class="hidden text-xs bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded font-mono uppercase tracking-wider animate-pulse">
+          ⚠️ SAFETY CAR DEPLOYED
+        </div>
+      </footer>
+    </section>
+
+  </main>
+
+  <!-- Dramatic 3D Victory Podium Overlay -->
+  <div id="podiumModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass w-full max-w-2xl p-6 md:p-8 rounded-3xl border border-amber-500/40 text-center space-y-6 shadow-2xl">
+      <div>
+        <span class="text-xs font-black tracking-widest text-amber-400 uppercase bg-amber-400/10 px-3 py-1 rounded-full border border-amber-500/30">Official FIA Results</span>
+        <h2 class="text-3xl md:text-4xl font-black text-white mt-2">GRAND PRIX VICTORY PODIUM</h2>
+        <p class="text-xs text-slate-400 mt-1">Championship trophy awards & fastest lap recognition</p>
+      </div>
+
+      <!-- 3D Podium Columns -->
+      <div class="grid grid-cols-3 gap-2 md:gap-4 items-end pt-4 pb-2">
+        <!-- 2nd Place -->
+        <div class="flex flex-col items-center">
+          <div class="w-6 h-6 rounded-full mb-1" id="podiumP2Color"></div>
+          <div class="font-bold text-sm text-slate-200" id="podiumP2Name">Driver 2</div>
+          <div class="text-[10px] text-slate-400 mb-2" id="podiumP2Team">Silver Arrow</div>
+          <div class="w-full h-28 bg-gradient-to-t from-slate-800 to-slate-700 rounded-t-2xl border-t-4 border-slate-300 flex flex-col justify-center items-center shadow-lg">
+            <span class="text-3xl font-black text-slate-200">2</span>
+            <span class="text-[10px] uppercase font-bold text-slate-300">P2 • SILVER</span>
+          </div>
+        </div>
+
+        <!-- 1st Place (Winner) -->
+        <div class="flex flex-col items-center">
+          <div class="text-3xl mb-1 animate-bounce">👑</div>
+          <div class="w-7 h-7 rounded-full mb-1" id="podiumP1Color"></div>
+          <div class="font-black text-base md:text-lg text-amber-400" id="podiumP1Name">Driver 1</div>
+          <div class="text-[11px] text-amber-200 font-bold mb-2" id="podiumP1Team">Scuderia F1</div>
+          <div class="w-full h-40 bg-gradient-to-t from-amber-600 via-yellow-500 to-amber-400 rounded-t-2xl border-t-4 border-yellow-200 flex flex-col justify-center items-center shadow-2xl shadow-amber-500/40">
+            <span class="text-5xl font-black text-slate-950">1</span>
+            <span class="text-xs uppercase font-black text-slate-950">WINNER • GOLD</span>
+          </div>
+        </div>
+
+        <!-- 3rd Place -->
+        <div class="flex flex-col items-center">
+          <div class="w-6 h-6 rounded-full mb-1" id="podiumP3Color"></div>
+          <div class="font-bold text-sm text-slate-200" id="podiumP3Name">Driver 3</div>
+          <div class="text-[10px] text-slate-400 mb-2" id="podiumP3Team">Papaya Speed</div>
+          <div class="w-full h-20 bg-gradient-to-t from-amber-900 to-amber-800 rounded-t-2xl border-t-4 border-amber-600 flex flex-col justify-center items-center shadow-lg">
+            <span class="text-2xl font-black text-amber-200">3</span>
+            <span class="text-[9px] uppercase font-bold text-amber-300">P3 • BRONZE</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-center gap-3 pt-2">
+        <button onclick="closePodiumModal()" class="px-6 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-sm rounded-xl transition shadow-lg shadow-red-900/30">
+          Close Podium & Re-Inspect Grid
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real F1 Circuit Geometry & Dynamic Physics Engine Script -->
+  <script>
+    const canvas = document.getElementById('circuitCanvas');
+    const ctx = canvas.getContext('2d');
+    let animationFrameId = null;
+
+    // Authentic Silverstone Circuit Key Waypoints (normalized 0 to 1 coordinates)
+    const SILVERSTONE_WAYPOINTS = [
+      { x: 0.18, y: 0.70, name: "Hamilton Straight" },
+      { x: 0.23, y: 0.58, name: "Abbey (Turn 1)" },
+      { x: 0.28, y: 0.55, name: "Farm Curve (Turn 2)" },
+      { x: 0.32, y: 0.62, name: "Village Corner (Turn 3)" },
+      { x: 0.29, y: 0.72, name: "The Loop (Turn 4)" },
+      { x: 0.33, y: 0.82, name: "Aintree (Turn 5)" },
+      { x: 0.48, y: 0.78, name: "Wellington Straight (DRS 1)" },
+      { x: 0.58, y: 0.75, name: "Brooklands (Turn 6)" },
+      { x: 0.55, y: 0.65, name: "Luffield (Turn 7)" },
+      { x: 0.50, y: 0.58, name: "Woodcote (Turn 8)" },
+      { x: 0.55, y: 0.44, name: "National Pits Straight" },
+      { x: 0.64, y: 0.35, name: "Copse Corner (Turn 9)" },
+      { x: 0.74, y: 0.30, name: "Maggotts (Turn 10)" },
+      { x: 0.82, y: 0.33, name: "Becketts (Turn 11)" },
+      { x: 0.86, y: 0.42, name: "Chapel (Turn 12)" },
+      { x: 0.78, y: 0.65, name: "Hangar Straight (DRS 2)" },
+      { x: 0.75, y: 0.78, name: "Stowe Corner (Turn 15)" },
+      { x: 0.68, y: 0.86, name: "Vale (Turn 16)" },
+      { x: 0.58, y: 0.88, name: "Club Corner (Turn 18)" },
+      { x: 0.35, y: 0.88, name: "Wing Straight" },
+      { x: 0.18, y: 0.70, name: "Start/Finish Line" }
+    ];
+
+    // Smooth Catmull-Rom spline path generator
+    function getSplinePoint(points, t) {
+      const p = (points.length - 1) * t;
+      const intPoint = Math.floor(p);
+      const weight = p - intPoint;
+
+      function getP(i) {
+        if (i < 0) return points[0];
+        if (i >= points.length) return points[points.length - 1];
+        return points[i];
+      }
+
+      const p0 = getP(intPoint - 1);
+      const p1 = getP(intPoint);
+      const p2 = getP(intPoint + 1);
+      const p3 = getP(intPoint + 2);
+
+      const w2 = weight * weight;
+      const w3 = w2 * weight;
+
+      const x = 0.5 * (
+        (2 * p1.x) +
+        (-p0.x + p2.x) * weight +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * w2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * w3
+      );
+
+      const y = 0.5 * (
+        (2 * p1.y) +
+        (-p0.y + p2.y) * weight +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * w2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * w3
+      );
+
+      return { x, y };
+    }
+
+    // Pre-calculate track spline points
+    const TRACK_POINTS_COUNT = 800;
+    let trackSpline = [];
+
+    function buildTrackSpline(width, height) {
+      trackSpline = [];
+      for (let i = 0; i <= TRACK_POINTS_COUNT; i++) {
+        const pt = getSplinePoint(SILVERSTONE_WAYPOINTS, i / TRACK_POINTS_COUNT);
+        trackSpline.push({
+          x: pt.x * width,
+          y: pt.y * height
+        });
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      buildTrackSpline(rect.width, rect.height);
+      drawTrackBackground(rect.width, rect.height);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // Draw authentic asphalt circuit with curbs, runoffs, and grass
+    function drawTrackBackground(width, height) {
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Infield grass with ambient texture
+      ctx.fillStyle = '#0a101d';
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Track Runoff gravel traps & tarmac runoffs
+      ctx.lineWidth = 42;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      trackSpline.forEach((pt, i) => {
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      });
+      ctx.stroke();
+
+      // 3. Alternating Red & White Curbs
+      ctx.lineWidth = 32;
+      ctx.strokeStyle = '#dc2626';
+      ctx.setLineDash([12, 12]);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineDashOffset = 12;
+      ctx.stroke();
+      ctx.setLineDash([]); // reset
+
+      // 4. Main Asphalt Circuit Surface
+      ctx.lineWidth = 24;
+      ctx.strokeStyle = '#0f172a';
+      ctx.stroke();
+
+      // 5. Racing Line Groove (Tire rubbered line)
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#020617';
+      ctx.stroke();
+
+      // 6. DRS Zone Highlights
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#10b981';
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      // Wellington straight & Hangar straight segments
+      for (let i = 200; i < 280; i++) ctx.lineTo(trackSpline[i].x, trackSpline[i].y);
+      for (let i = 580; i < 680; i++) ctx.lineTo(trackSpline[i].x, trackSpline[i].y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 7. Start / Finish Line Checkered Bar
+      const startPt = trackSpline[0];
+      const nextPt = trackSpline[2];
+      const angle = Math.atan2(nextPt.y - startPt.y, nextPt.x - startPt.x) + Math.PI / 2;
+      ctx.save();
+      ctx.translate(startPt.x, startPt.y);
+      ctx.rotate(angle);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-14, -2, 28, 4);
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(-14, -2, 7, 4);
+      ctx.fillRect(0, -2, 7, 4);
+      ctx.restore();
+    }
+
+    // --- CAR PHYSICS & INCIDENT SIMULATION ENGINE ---
+    let raceInProgress = false;
+    let drivers = [];
+    let currentLap = 1;
+    const TOTAL_LAPS = 5;
+    let raceFrame = 0;
+    const FRAMES_PER_LAP = 1500; // ~25 seconds per lap at 60fps = ~2.1 minutes total
+    let particles = [];
+    let safetyCarActive = false;
+    let safetyCarTimer = 0;
+
+    function initDrivers() {
+      const state = window.store.getState();
+      const racers = state.racers || [];
+
+      drivers = racers.map((r, i) => {
+        const up = r.upgrades || {};
+        const topBonus = (up.topSpeed || 0) * 0.35;
+        const accelBonus = (up.accel || 0) * 0.30;
+        const gripBonus = (up.handling || 0) * 0.40;
+        const nosBonus = (up.nos || 0) * 0.6;
+
+        const baseScore = 1.0 + (topBonus * 0.3) + (accelBonus * 0.25) + (gripBonus * 0.3) + (nosBonus * 0.15);
+
+        return {
+          id: r.id,
+          name: r.name,
+          team: r.carName || 'F1 Team',
+          color: r.color || '#ef4444',
+          upgrades: up,
+          trackProgress: (i * -0.02), // staggered grid launch
+          speed: baseScore,
+          baseSpeed: baseScore,
+          lateralOffset: (i % 2 === 0 ? 3 : -3), // left or right of racing line
+          lap: 1,
+          isSpinning: false,
+          spinAngle: 0,
+          spinDuration: 0,
+          hasCrashed: false,
+          drsActive: false,
+          ersBoost: 0,
+          rank: i + 1,
+          gapToLeader: '0.0s',
+          lapTimes: []
+        };
+      });
+
+      renderTimingTower();
+    }
+
+    function renderTimingTower() {
+      const tower = document.getElementById('timingTowerList');
+      if (!tower) return;
+      tower.innerHTML = '';
+
+      const sorted = [...drivers].sort((a,b) => (b.lap + b.trackProgress) - (a.lap + a.trackProgress));
+
+      sorted.forEach((d, idx) => {
+        const row = document.createElement('div');
+        row.className = `p-2 rounded-xl flex items-center justify-between transition-all duration-300 ${idx === 0 ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-slate-900/80 border border-slate-800'}`;
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded font-mono font-black text-xs flex items-center justify-center ${idx === 0 ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-300'}">
+              ${idx + 1}
+            </span>
+            <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${d.color};"></span>
+            <div>
+              <div class="text-xs font-bold text-white leading-none">${d.name}</div>
+              <div class="text-[9px] text-slate-400 font-mono mt-0.5">${d.team}</div>
+            </div>
+          </div>
+          <div class="text-right font-mono text-[10px]">
+            ${d.hasCrashed ? '<span class="text-rose-500 font-bold">DNF (CRASH)</span>' : 
+              d.isSpinning ? '<span class="text-amber-400 font-bold">SPIN</span>' :
+              idx === 0 ? '<span class="text-emerald-400 font-bold">LEADER</span>' : 
+              `<span class="text-slate-300">${d.gapToLeader}</span>`}
+          </div>
+        `;
+        tower.appendChild(row);
+      });
+    }
+
+    // 5 Red Lights Sequence
+    function initiateRaceCountdown() {
+      if (raceInProgress) return;
+      const box = document.getElementById('countdownBox');
+      const btn = document.getElementById('startRaceBtn');
+      if (btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
+      if (box) box.classList.remove('hidden');
+
+      initDrivers();
+      window.sfx.rev();
+
+      let count = 1;
+      const interval = setInterval(() => {
+        if (count <= 5) {
+          const el = document.getElementById(`light${count}`);
+          if (el) el.className = "w-7 h-7 rounded-full bg-red-600 border-2 border-red-400 shadow-lg shadow-red-600/50";
+          window.sfx.beep(420, 'square', 0.12, 0.2);
+          count++;
+        } else {
+          clearInterval(interval);
+          setTimeout(() => {
+            for (let i = 1; i <= 5; i++) {
+              const el = document.getElementById(`light${i}`);
+              if (el) el.className = "w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700";
+            }
+            window.sfx.beep(920, 'triangle', 0.45, 0.4);
+            if (box) box.classList.add('hidden');
+            startGrandPrixLive();
+          }, 800);
+        }
+      }, 700);
+    }
+
+    function setRadio(text, isAlert = false) {
+      const radio = document.getElementById('radioTicker');
+      if (!radio) return;
+      radio.innerHTML = isAlert ? `<span class="text-amber-400 font-black">${text}</span>` : text;
+    }
+
+    function startGrandPrixLive() {
+      raceInProgress = true;
+      raceFrame = 0;
+      currentLap = 1;
+      particles = [];
+      safetyCarActive = false;
+
+      setRadio("🟢 LIGHTS OUT AND AWAY WE GO! Brilliant launch through Abbey!");
+      window.sfx.rev();
+
+      function update() {
+        raceFrame++;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+
+        // Redraw Track
+        drawTrackBackground(width, height);
+
+        // Update Lap
+        const estimatedLap = Math.min(TOTAL_LAPS, Math.floor(raceFrame / FRAMES_PER_LAP) + 1);
+        if (estimatedLap !== currentLap) {
+          currentLap = estimatedLap;
+          document.getElementById('lapBadge').textContent = `LAP ${currentLap}/${TOTAL_LAPS}`;
+          if (currentLap === TOTAL_LAPS) {
+            setRadio("🏁 FINAL LAP! Maximum battery deploy to the checkered flag!", true);
+          }
+        }
+
+        // Safety Car recovery countdown
+        if (safetyCarActive) {
+          safetyCarTimer--;
+          if (safetyCarTimer <= 0) {
+            safetyCarActive = false;
+            document.getElementById('safetyCarBadge').classList.add('hidden');
+            document.getElementById('flagStatusBanner').className = "hidden md:flex items-center gap-3 px-4 py-1.5 rounded-xl border border-slate-700 bg-slate-900/80";
+            document.getElementById('flagText').textContent = "TRACK CLEAR • GREEN FLAG";
+            document.getElementById('flagText').className = "text-xs font-black font-mono tracking-widest text-emerald-400 uppercase";
+            setRadio("🟢 SAFETY CAR IN THIS LAP! Green flag racing resumes!", true);
+          }
+        }
+
+        // Update Each Driver Physics
+        drivers.forEach((d, idx) => {
+          if (d.hasCrashed) {
+            // Draw crashed stationary car with smoke
+            drawCarOnTrack(d, width, height, true);
+            return;
+          }
+
+          // Spin-out mechanics
+          if (d.isSpinning) {
+            d.spinAngle += 0.25;
+            d.spinDuration--;
+            // Smoke particles
+            particles.push({
+              x: d.currentX + (Math.random() - 0.5) * 8,
+              y: d.currentY + (Math.random() - 0.5) * 8,
+              vx: (Math.random() - 0.5) * 1.5,
+              vy: (Math.random() - 0.5) * 1.5,
+              alpha: 0.8,
+              color: '#cbd5e1',
+              size: 5 + Math.random() * 4
+            });
+
+            if (d.spinDuration <= 0) {
+              d.isSpinning = false;
+              d.spinAngle = 0;
+              d.speed = d.baseSpeed * 0.6; // recovery speed
+              setRadio(`🟡 ${d.name} rejoins the track after a 360° spin at Becketts!`);
+            }
+            drawCarOnTrack(d, width, height);
+            return;
+          }
+
+          // Normal Driving Dynamics
+          let currentSpeed = d.baseSpeed * (safetyCarActive ? 0.6 : 1.0);
+
+          // Slipstream & DRS logic
+          d.drsActive = false;
+          drivers.forEach(other => {
+            if (other.id !== d.id && !other.hasCrashed && !other.isSpinning) {
+              const diff = (other.trackProgress + other.lap) - (d.trackProgress + d.lap);
+              if (diff > 0.005 && diff < 0.04) {
+                // In Slipstream!
+                currentSpeed += 0.35;
+                if (currentLap >= 2) {
+                  d.drsActive = true;
+                  currentSpeed += 0.45;
+                }
+              }
+            }
+          });
+
+          // Strategic ERS deploy
+          if (d.ersBoost > 0) {
+            d.ersBoost--;
+            currentSpeed += 0.7;
+          } else if (Math.random() < 0.006 && !safetyCarActive) {
+            d.ersBoost = 70; // 70 frames of boost
+            window.sfx.turbo();
+          }
+
+          // Random Drama Events (Spins, Lock-ups, Lead changes)
+          if (!safetyCarActive && currentLap >= 2 && Math.random() < 0.0006) {
+            // Trigger Spin-out!
+            d.isSpinning = true;
+            d.spinDuration = 80;
+            window.sfx.screech();
+            setRadio(`⚠️ YELLOW FLAG! ${d.name} has spun out across the kerbs at Turn 4!`, true);
+            document.getElementById('flagStatusBanner').className = "hidden md:flex items-center gap-3 px-4 py-1.5 rounded-xl border border-yellow-500/50 flag-yellow";
+            document.getElementById('flagText').textContent = "SECTOR 2 YELLOW • INCIDENT";
+            document.getElementById('flagText').className = "text-xs font-black font-mono tracking-widest text-amber-300 uppercase";
+          }
+
+          // Rare Safety Car / Crash
+          if (!safetyCarActive && currentLap === 3 && Math.random() < 0.0003 && !drivers.some(x => x.hasCrashed)) {
+            d.hasCrashed = true;
+            safetyCarActive = true;
+            safetyCarTimer = 350; // ~6 seconds of safety car
+            window.sfx.crash();
+            document.getElementById('safetyCarBadge').classList.remove('hidden');
+            document.getElementById('flagStatusBanner').className = "hidden md:flex items-center gap-3 px-4 py-1.5 rounded-xl border border-yellow-500/50 flag-yellow";
+            document.getElementById('flagText').textContent = "SAFETY CAR DEPLOYED";
+            document.getElementById('flagText').className = "text-xs font-black font-mono tracking-widest text-amber-400 uppercase";
+            setRadio(`🚨 SAFETY CAR DEPLOYED! ${d.name} suffers heavy lockup and slides into the gravel at Stowe!`, true);
+          }
+
+          // Progress along the circuit
+          const stepDelta = (currentSpeed * 0.00075);
+          d.trackProgress += stepDelta;
+
+          if (d.trackProgress >= 1.0) {
+            d.trackProgress -= 1.0;
+            d.lap++;
+          }
+
+          drawCarOnTrack(d, width, height);
+        });
+
+        // Update Particles (Sparks & Tire Smoke)
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= 0.025;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          if (p.alpha <= 0) particles.splice(i, 1);
+        }
+
+        // Real-Time Sort & Ranking
+        if (raceFrame % 15 === 0) {
+          const activeDrivers = [...drivers].sort((a,b) => (b.lap + b.trackProgress) - (a.lap + a.trackProgress));
+          const leader = activeDrivers[0];
+
+          activeDrivers.forEach((d, rIdx) => {
+            if (rIdx === 0) {
+              d.gapToLeader = 'LEADER';
+            } else {
+              const diff = ((leader.lap + leader.trackProgress) - (d.lap + d.trackProgress)) * 22;
+              d.gapToLeader = `+${diff.toFixed(2)}s`;
+            }
+
+            // Overtake detection
+            if (d.rank !== rIdx + 1 && !safetyCarActive) {
+              if (rIdx + 1 < d.rank && Math.random() < 0.3) {
+                window.sfx.overtake();
+                setRadio(`🔥 DARING PASS! ${d.name} dives up the inside into Stowe to claim P${rIdx + 1}!`);
+              }
+              d.rank = rIdx + 1;
+            }
+          });
+
+          renderTimingTower();
+        }
+
+        // Check for Grand Prix Finish
+        const totalTargetFrames = TOTAL_LAPS * FRAMES_PER_LAP;
+        if (raceFrame >= totalTargetFrames) {
+          finishGrandPrix();
+        } else {
+          animationFrameId = requestAnimationFrame(update);
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(update);
+    }
+
+    // Draw dynamic car sprite with rotation, smoke, and sparks along the spline
+    function drawCarOnTrack(driver, width, height, isStationary = false) {
+      const splineIdx = Math.floor(Math.max(0, Math.min(0.999, driver.trackProgress)) * TRACK_POINTS_COUNT);
+      const nextIdx = (splineIdx + 4) % TRACK_POINTS_COUNT;
+
+      const currPt = trackSpline[splineIdx] || trackSpline[0];
+      const nextPt = trackSpline[nextIdx] || trackSpline[1];
+
+      // Tangent angle
+      let angle = Math.atan2(nextPt.y - currPt.y, nextPt.x - currPt.x);
+      if (driver.isSpinning) angle += driver.spinAngle;
+
+      // Normal offset vector (for side-by-side positioning)
+      const nx = -Math.sin(angle) * driver.lateralOffset;
+      const ny = Math.cos(angle) * driver.lateralOffset;
+
+      const posX = currPt.x + nx;
+      const posY = currPt.y + ny;
+
+      driver.currentX = posX;
+      driver.currentY = posY;
+
+      ctx.save();
+      ctx.translate(posX, posY);
+      ctx.rotate(angle);
+
+      // Sparks when DRS or ERS active
+      if (driver.drsActive || driver.ersBoost > 0) {
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(-12, (Math.random() - 0.5) * 4, 4, 1.5);
+      }
+
+      // Wheels
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-8, -7, 6, 3); // Rear Left
+      ctx.fillRect(-8, 4, 6, 3);  // Rear Right
+      ctx.fillRect(7, -6, 5, 2.5); // Front Left
+      ctx.fillRect(7, 3.5, 5, 2.5);  // Front Right
+
+      // Rear Wing
+      ctx.fillStyle = driver.upgrades.aero >= 2 ? '#fbbf24' : '#1e293b';
+      ctx.fillRect(-10, -6, 2.5, 12);
+
+      // Chassis Body
+      ctx.fillStyle = driver.color;
+      ctx.beginPath();
+      ctx.moveTo(12, 0);
+      ctx.lineTo(4, -3.5);
+      ctx.lineTo(-7, -4);
+      ctx.lineTo(-7, 4);
+      ctx.lineTo(4, 3.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Halo & Cockpit
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(-2, -1.8, 5, 3.6);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 1.4, 0, Math.PI * 2); // Driver Helmet
+      ctx.fill();
+
+      // Front Wing
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(11, -5, 2, 10);
+
+      // DRS Active neon streak
+      if (driver.drsActive) {
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-11, -6, 2.5, 12);
+      }
+
+      ctx.restore();
+    }
+
+    function finishGrandPrix() {
+      raceInProgress = false;
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+      const sorted = [...drivers].filter(d => !d.hasCrashed).sort((a,b) => (b.lap + b.trackProgress) - (a.lap + a.trackProgress));
+      const winner = sorted[0];
+
+      setRadio(`🏆 CHECKERED FLAG! Sensational victory for ${winner.name} at the British Grand Prix!`, true);
+      document.getElementById('flagText').textContent = "CHECKERED FLAG • RACE FINISHED";
+      document.getElementById('flagStatusBanner').className = "hidden md:flex items-center gap-3 px-4 py-1.5 rounded-xl border border-white bg-slate-900";
+
+      window.sfx.win();
+      confetti({ particleCount: 180, spread: 100, origin: { y: 0.5 } });
+
+      setTimeout(() => {
+        showPodiumAwards(sorted);
+      }, 1200);
+
+      const btn = document.getElementById('startRaceBtn');
+      if (btn) { btn.disabled = false; btn.classList.remove('opacity-50'); }
+    }
+
+    function showPodiumAwards(sorted) {
+      const modal = document.getElementById('podiumModal');
+      const p1 = sorted[0];
+      const p2 = sorted[1] || p1;
+      const p3 = sorted[2] || p1;
+
+      document.getElementById('podiumP1Name').textContent = p1.name;
+      document.getElementById('podiumP1Team').textContent = p1.team;
+      document.getElementById('podiumP1Color').style.backgroundColor = p1.color;
+
+      document.getElementById('podiumP2Name').textContent = p2.name;
+      document.getElementById('podiumP2Team').textContent = p2.team;
+      document.getElementById('podiumP2Color').style.backgroundColor = p2.color;
+
+      document.getElementById('podiumP3Name').textContent = p3.name;
+      document.getElementById('podiumP3Team').textContent = p3.team;
+      document.getElementById('podiumP3Color').style.backgroundColor = p3.color;
+
+      modal.classList.remove('hidden');
+      confetti({ particleCount: 200, spread: 120, origin: { y: 0.4 } });
+    }
+
+    function closePodiumModal() {
+      document.getElementById('podiumModal').classList.add('hidden');
+    }
+
+    // Auto-initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      resizeCanvas();
+      initDrivers();
+    });
+  </script>
+</body>
+</html>
