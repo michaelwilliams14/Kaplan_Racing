@@ -3,13 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Sales Grand Prix - Driver Garage</title>
+  <title>Sales Grand Prix - F1 Paddock Garage</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { background: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .glass { background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    body { background: #07090e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .glass { background: rgba(13, 17, 28, 0.88); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .f1-font { font-family: 'Titillium Web', sans-serif, system-ui; }
+    @keyframes pulseGlow { 0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); } 50% { opacity: 1; filter: drop-shadow(0 0 18px rgba(245,158,11,1)); } }
+    .ers-glow { animation: pulseGlow 1.8s infinite; }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen p-3 md:p-6 pb-20">
@@ -50,8 +53,8 @@
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(380, this.ctx.currentTime + 0.25);
+          osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.25);
           gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
           gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
           osc.connect(gain);
@@ -68,8 +71,8 @@
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = 'triangle';
-          osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.35);
+          osc.frequency.setValueAtTime(500, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1400, this.ctx.currentTime + 0.35);
           gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
           gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
           osc.connect(gain);
@@ -77,11 +80,6 @@
           osc.start();
           osc.stop(this.ctx.currentTime + 0.4);
         } catch(e) {}
-      }
-      win() {
-        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-          setTimeout(() => this.beep(freq, 'triangle', 0.25, 0.25), i * 120);
-        });
       }
     }
     window.sfx = new SoundFX();
@@ -98,10 +96,11 @@
     ];
 
     const DEFAULT_PARTS = [
-      { id: 'topSpeed', name: 'Engine / V8', icon: '🚀', stat: 'Top Speed', costs: [100, 250, 450, 750] },
-      { id: 'accel', name: 'Transmission', icon: '⚡', stat: 'Acceleration', costs: [80, 200, 400, 650] },
-      { id: 'handling', name: 'Grip Tires', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
-      { id: 'nos', name: 'Nitrous NOS', icon: '💥', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
+      { id: 'topSpeed', name: 'MGU-K V6 Hybrid Engine', icon: '⚡', stat: 'Top Speed', costs: [100, 250, 450, 750] },
+      { id: 'accel', name: 'Seamless F1 Gearbox', icon: '⚙️', stat: 'Acceleration', costs: [80, 200, 400, 650] },
+      { id: 'handling', name: 'P-Zero Soft Racing Slicks', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
+      { id: 'aero', name: 'DRS Carbon Rear Wing', icon: '🪽', stat: 'Top Speed', costs: [100, 240, 420, 700] },
+      { id: 'nos', name: 'ERS Battery Deploy Boost', icon: '🔋', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
     ];
 
     const DEFAULT_STATE = {
@@ -111,11 +110,11 @@
       rules: DEFAULT_RULES,
       parts: DEFAULT_PARTS,
       racers: [
-        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Redline F1', color: '#ef4444', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 0, nos: 0 } },
-        { id: 'r2', name: 'Matt', pin: '2222', car: '🚗', carName: 'Turbo GT', color: '#3b82f6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, nos: 0 } },
-        { id: 'r3', name: 'Daryl', pin: '3333', car: '🚙', carName: 'Offroad Trophy', color: '#10b981', spentCredits: 0, upgrades: { topSpeed: 0, accel: 1, handling: 0, nos: 0 } },
-        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🚓', carName: 'Interceptor', color: '#f59e0b', spentCredits: 0, upgrades: { topSpeed: 0, accel: 0, handling: 1, nos: 0 } },
-        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎', carName: 'LeMans Pro', color: '#8b5cf6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 0, nos: 0 } }
+        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Scuderia Corsa', color: '#dc2626', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 1, aero: 1, nos: 0 } },
+        { id: 'r2', name: 'Matt', pin: '2222', car: '🏎️', carName: 'Silver Arrow', color: '#06b6d4', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, aero: 0, nos: 0 } },
+        { id: 'r3', name: 'Daryl', pin: '3333', car: '🏎️', carName: 'Papaya Speed', color: '#f97316', spentCredits: 0, upgrades: { topSpeed: 0, accel: 1, handling: 0, aero: 1, nos: 0 } },
+        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🏎️', carName: 'Aston British Racing', color: '#059669', spentCredits: 0, upgrades: { topSpeed: 0, accel: 0, handling: 1, aero: 0, nos: 0 } },
+        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎️', carName: 'Red Bull Prototype', color: '#2563eb', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 0, aero: 0, nos: 0 } }
       ],
       kpiSnapshot: {
         heather: { threeStep: 8, maintainer: 4, strengthener: 3, reviews: 5, accessories: 14 },
@@ -181,23 +180,110 @@
       }
     }
     window.store = new GrandPrixStore();
+
+    // Visual F1 Car Renderer: Transforms car appearance dynamically based on installed parts!
+    function generateF1CarSVG(color = '#dc2626', upgrades = {}, scale = 1, showFlames = false) {
+      const topSpeedLvl = upgrades.topSpeed || 0;
+      const aeroLvl = upgrades.aero || 0;
+      const tiresLvl = upgrades.handling || 0;
+      const nosLvl = upgrades.nos || 0;
+
+      // Tire compound color: White (Hard) -> Yellow (Medium) -> Red (Soft) -> Glowing Gold (Hyper)
+      const tireCompound = tiresLvl >= 3 ? '#ef4444' : (tiresLvl >= 1 ? '#eab308' : '#64748b');
+      const tireWidth = tiresLvl >= 2 ? '14' : '10';
+
+      // Rear Wing profile expands with aero level
+      const wingHeight = 12 + (aeroLvl * 4);
+      const wingColor = aeroLvl >= 3 ? '#eab308' : (aeroLvl >= 1 ? color : '#334155');
+
+      // Engine cowl heat & exhaust glow
+      const engineGlow = topSpeedLvl >= 3 ? '#f97316' : (topSpeedLvl >= 1 ? '#e2e8f0' : '#475569');
+
+      return `
+        <svg viewBox="0 0 160 60" width="${160 * scale}" height="${60 * scale}" class="inline-block transition-all duration-300">
+          <defs>
+            <linearGradient id="bodyGrad_${color.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${color}" />
+              <stop offset="60%" stop-color="${color}" />
+              <stop offset="100%" stop-color="#0f172a" />
+            </linearGradient>
+            <filter id="ersGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="glow"/>
+              <feComposite in="SourceGraphic" in2="glow" operator="over"/>
+            </filter>
+          </defs>
+
+          <!-- DRS Rear Wing Upgrade -->
+          <g transform="translate(14, ${35 - wingHeight})">
+            <!-- Wing Endplates -->
+            <rect x="0" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
+            <rect x="22" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
+            <!-- Wing Aerofoil Planes -->
+            <rect x="2" y="2" width="22" height="4" fill="${wingColor}" rx="1"/>
+            ${aeroLvl >= 2 ? `<rect x="2" y="8" width="22" height="3" fill="#cbd5e1" rx="1"/>` : ''}
+            ${aeroLvl >= 3 ? `<rect x="4" y="0" width="18" height="2" fill="#ef4444" rx="0.5"/>` : ''}
+          </g>
+
+          <!-- Rear Exhaust Flames & ERS Boost Glow -->
+          ${(showFlames || nosLvl >= 3) ? `
+            <polygon points="10,38 -2,35 6,40 -6,41 4,43 -1,45 10,42" fill="#f59e0b" filter="url(#ersGlow)" class="animate-pulse"/>
+            <polygon points="8,39 1,37 6,40 0,41 6,42 1,44 8,41" fill="#ef4444"/>
+          ` : ''}
+
+          <!-- Rear Suspension Wishbones -->
+          <line x1="28" y1="36" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
+          <line x1="28" y1="44" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
+
+          <!-- Rear Wheels (P-Zero Racing Slicks) -->
+          <rect x="22" y="22" width="${tireWidth}" height="32" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="2"/>
+          <line x1="27" y1="28" x2="27" y2="48" stroke="#334155" stroke-width="1.5"/>
+
+          <!-- Main F1 Monocoque Chassis -->
+          <!-- Sidepods & Engine Cover -->
+          <path d="M 36,40 Q 45,30 65,28 L 95,29 Q 120,32 145,40 L 140,43 Q 110,44 75,44 Q 50,45 36,42 Z" fill="url(#bodyGrad_${color.replace('#','')})"/>
+          <!-- Halo Safety Cockpit Structure -->
+          <path d="M 72,28 Q 80,18 90,26 L 86,28 Z" fill="#020617" stroke="#94a3b8" stroke-width="1.5"/>
+          <!-- Driver Helmet -->
+          <circle cx="80" cy="27" r="4.5" fill="#f8fafc" stroke="#dc2626" stroke-width="1"/>
+          <!-- Airbox Intake (Above Driver) -->
+          <path d="M 66,28 L 74,20 L 78,28 Z" fill="${engineGlow}"/>
+
+          <!-- Front Suspension Wishbones -->
+          <line x1="125" y1="40" x2="135" y2="35" stroke="#475569" stroke-width="2"/>
+          <line x1="125" y1="40" x2="135" y2="45" stroke="#475569" stroke-width="2"/>
+
+          <!-- Front Wheels (P-Zero Racing Slicks) -->
+          <rect x="122" y="26" width="${Math.max(8, Number(tireWidth)-2)}" height="26" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="1.8"/>
+
+          <!-- Multi-Element Front Aerodynamic Nosecone & Wing -->
+          <polygon points="140,39 158,40 156,43 138,42" fill="${wingColor}"/>
+          <path d="M 148,43 L 160,43 L 158,46 L 146,45 Z" fill="#0f172a"/>
+          ${aeroLvl >= 2 ? `<line x1="152" y1="38" x2="152" y2="45" stroke="#e2e8f0" stroke-width="1.5"/>` : ''}
+
+          <!-- ERS Energy Ring Indicator -->
+          ${nosLvl >= 1 ? `
+            <circle cx="58" cy="38" r="${3 + nosLvl}" fill="none" stroke="#38bdf8" stroke-width="1.5" class="ers-glow" stroke-dasharray="2,2"/>
+          ` : ''}
+        </svg>
+      `;
+    }
   </script>
 
-  <!-- Header -->
+  <!-- Navigation Bar -->
   <header class="max-w-4xl mx-auto flex items-center justify-between py-3 mb-6 border-b border-slate-800">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-red-900/30">🏎️</div>
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 via-amber-500 to-red-700 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-red-900/40">🏎️</div>
       <div>
-        <h1 class="font-extrabold text-xl tracking-tight leading-none text-white">SALES <span class="text-red-500">GRAND PRIX</span></h1>
-        <p class="text-xs text-slate-400" id="campaignName">Consultant Garage Bay</p>
+        <h1 class="font-black text-xl tracking-wider leading-none text-white">FORMULA 1 <span class="text-red-500">PADDOCK</span></h1>
+        <p class="text-[11px] font-mono text-slate-400" id="campaignName">Consultant Garage & Livery Tuning</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
       <button onclick="logout()" id="logoutBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
         <i class="fa-solid fa-right-from-bracket mr-1"></i> Exit Garage
       </button>
-      <a href="./manager.html" class="inline-flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition" title="Manager Command">
-        <i class="fa-solid fa-lock text-amber-400"></i> Manager Hub
+      <a href="./manager.html" class="inline-flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition">
+        <i class="fa-solid fa-lock text-amber-400"></i> Director Hub
       </a>
     </div>
   </header>
@@ -207,9 +293,9 @@
     <div id="authView" class="max-w-md mx-auto py-8">
       <div class="glass p-6 rounded-2xl shadow-2xl border border-slate-800">
         <div class="text-center mb-6">
-          <div class="text-5xl mb-2">🏁</div>
-          <h2 class="text-2xl font-black text-white">Driver Login</h2>
-          <p class="text-xs text-slate-400 mt-1">Enter your 4-digit PIN to enter your private tuning garage</p>
+          <div class="text-5xl mb-2 animate-bounce">🏎️</div>
+          <h2 class="text-2xl font-black text-white tracking-wide">F1 Driver Access</h2>
+          <p class="text-xs text-slate-400 mt-1">Enter your 4-digit PIN to inspect your machine & install upgrades</p>
           <p class="text-[11px] text-amber-400/90 mt-1 font-mono">Demo PINs: Heather 1111 | Matt 2222 | Daryl 3333</p>
         </div>
 
@@ -236,7 +322,7 @@
 
         <div class="border-t border-slate-800/80 pt-4 text-center">
           <button onclick="showRegisterModal()" class="text-xs text-amber-400 hover:text-amber-300 font-bold underline">
-            + Claim Driver Profile & Pick Car
+            + Claim Driver Cockpit & Choose Livery
           </button>
         </div>
       </div>
@@ -245,55 +331,61 @@
     <!-- GARAGE BAY VIEW -->
     <div id="garageView" class="hidden space-y-6">
 
-      <!-- Driver Vehicle Showcase -->
-      <div class="glass p-5 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-          <div class="w-20 h-20 rounded-2xl bg-slate-950 flex items-center justify-center text-5xl border-4 shadow-xl" id="driverCarIcon" style="border-color: #ef4444;">
-            🏎️
-          </div>
+      <!-- Dynamic Visual Vehicle Showcase (Evolves with upgrades!) -->
+      <div class="glass p-6 rounded-2xl border border-slate-800 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div class="flex items-center gap-2">
+              <span class="text-xs px-2.5 py-0.5 rounded bg-red-600 text-white font-black tracking-wider uppercase" id="driverCarBadge">Scuderia F1</span>
               <h2 class="text-2xl font-black text-white" id="driverName">Driver</h2>
-              <span id="driverCarBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">Redline F1</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Car & Upgrades customized in your garage</p>
-            <button onclick="openCarCustomizer()" class="text-[11px] text-amber-400 hover:underline mt-1 font-bold flex items-center gap-1">
-              <i class="fa-solid fa-paint-roller"></i> Change Car / Color
+            <p class="text-xs text-slate-400 mt-1">Installed upgrades visibly evolve your race chassis below</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button onclick="openCarCustomizer()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-palette"></i> Team Livery & Colors
             </button>
+            <div class="bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/30 px-4 py-2 rounded-xl flex items-center gap-2.5">
+              <span class="text-2xl">🪙</span>
+              <div>
+                <div class="text-[9px] uppercase font-bold text-amber-300">Tuning Budget</div>
+                <div class="text-2xl font-black text-white leading-none" id="driverCredits">0</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Available Credits to Spend -->
-        <div class="bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/30 p-4 rounded-xl flex items-center gap-3">
-          <div class="text-4xl text-amber-400">🪙</div>
-          <div>
-            <div class="text-[10px] uppercase font-bold text-amber-300 tracking-wider">Tuning Budget Available</div>
-            <div class="text-3xl font-black text-white" id="driverCredits">0</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Calculated from KPI figures</div>
-          </div>
+        <!-- F1 Chassis Visual Stage -->
+        <div class="relative bg-slate-950/90 rounded-2xl p-6 border border-slate-800/80 flex flex-col items-center justify-center overflow-hidden">
+          <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900/50 via-slate-950 to-slate-950"></div>
+          <div id="carVisualStage" class="relative z-10 transition-all duration-300 transform hover:scale-105"></div>
+          
+          <!-- Spec Badges under car -->
+          <div class="relative z-10 flex flex-wrap justify-center gap-3 mt-4 text-[11px] font-mono" id="carVisualSpecBadges"></div>
         </div>
       </div>
 
-      <!-- KPI Summary Cards (Dynamic) -->
+      <!-- KPI Summary Cards -->
       <div class="glass p-5 rounded-2xl border border-slate-800">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
-            <i class="fa-solid fa-table-cells text-emerald-400"></i> Your Store Sales & KPI Record (From Sheet)
+            <i class="fa-solid fa-flag-checkered text-red-500"></i> Season KPI Benchmark Records (Sheet Synced)
           </h3>
-          <span class="text-[11px] text-slate-400">Live Synced</span>
+          <span class="text-[11px] text-emerald-400 font-mono">● Telemetry Live</span>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center" id="kpiStatsGrid"></div>
       </div>
 
-      <!-- Performance Upgrades Bench (Dynamic from Manager Parts Bay) -->
+      <!-- Performance Tuning Bay -->
       <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
         <div>
           <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
-            <i class="fa-solid fa-wrench text-amber-400"></i> Vehicle Tuning Bay
+            <i class="fa-solid fa-screwdriver-wrench text-amber-400"></i> Paddock Component Upgrade Bench
           </h3>
-          <p class="text-xs text-slate-400">Spend your earned credits to level up parts for race day victory!</p>
+          <p class="text-xs text-slate-400">Installing F1 parts directly upgrades your machine's visual aero and live race speed!</p>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="tuningShopGrid"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="tuningShopGrid"></div>
       </div>
 
     </div>
@@ -302,25 +394,25 @@
   <!-- Car Customizer Modal -->
   <div id="customizerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="glass w-full max-w-sm p-6 rounded-2xl border border-slate-800 space-y-4">
-      <h3 class="text-lg font-black text-white">Customize Your Vehicle</h3>
+      <h3 class="text-lg font-black text-white">Select F1 Constructor Team</h3>
       <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Vehicle Model</label>
-        <select id="editCarSelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm outline-none">
-          <option value="🏎️">🏎️ Redline Formula 1</option>
-          <option value="🚗">🚗 Twin-Turbo Sport GT</option>
-          <option value="🏎">🏎 LeMans Prototype</option>
-          <option value="🚙">🚙 Offroad Trophy Truck</option>
-          <option value="🚓">🚓 Interceptor Pursuit</option>
-          <option value="🚕">🚕 Aero Drift Tuner</option>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Constructor Livery Team</label>
+        <select id="editCarSelect" onchange="autoAssignTeamColor()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm outline-none">
+          <option value="#dc2626">Scuderia Redline (Corsa Red)</option>
+          <option value="#06b6d4">Silver Arrow Racing (Cyan / Silver)</option>
+          <option value="#f97316">Papaya Speed Works (McLaren Orange)</option>
+          <option value="#059669">Aston Green Prototype (British Racing)</option>
+          <option value="#2563eb">Oracle Bull Speed (Cobalt Blue)</option>
+          <option value="#8b5cf6">Veloce Hyper Formula (Purple Carbon)</option>
         </select>
       </div>
       <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Livery / Accent Color</label>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Custom Team Accent Color</label>
         <input type="color" id="editCarColor" class="w-full h-10 bg-slate-950 border border-slate-800 rounded-xl p-1 cursor-pointer">
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeCarCustomizer()" class="px-4 py-2 text-xs text-slate-400">Cancel</button>
-        <button onclick="saveCarCustomization()" class="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 font-bold text-white rounded-xl">Save Setup</button>
+        <button onclick="saveCarCustomization()" class="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 font-bold text-white rounded-xl">Install Livery</button>
       </div>
     </div>
   </div>
@@ -328,14 +420,14 @@
   <!-- Register Modal -->
   <div id="registerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="glass w-full max-w-md p-6 rounded-2xl border border-slate-800 space-y-4">
-      <h3 class="text-lg font-black text-white">Claim Driver Profile</h3>
-      <p class="text-xs text-slate-400">Match your name with the Google Sheet to link your sales credits.</p>
+      <h3 class="text-lg font-black text-white">Register F1 Driver Cockpit</h3>
+      <p class="text-xs text-slate-400">Match your name with the team record to claim your performance credits.</p>
       <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Your Name</label>
-        <input type="text" id="regName" placeholder="e.g. Heather, Matt, or your name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+        <label class="block text-xs font-bold text-slate-400 mb-1">Driver Name (As written in Sheet)</label>
+        <input type="text" id="regName" placeholder="e.g. Heather, Matt, Daryl" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
       </div>
       <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Set 4-Digit Garage PIN</label>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Set 4-Digit Cockpit PIN</label>
         <input type="password" id="regPin" maxlength="4" placeholder="4 digits" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm font-mono tracking-widest">
       </div>
       <div class="flex justify-end gap-2 pt-2">
@@ -348,7 +440,12 @@
   <script>
     let activeRacerId = null;
     let pinBuffer = '';
-    const TIERS = ['Stock', 'Sport', 'Pro', 'Super', 'Hyper'];
+    const TIERS = ['Base Spec', 'Sport Aero', 'Pro Spec', 'Supercharged', 'Hyper Velocity'];
+
+    function autoAssignTeamColor() {
+      const col = document.getElementById('editCarSelect').value;
+      document.getElementById('editCarColor').value = col;
+    }
 
     function pressKey(n) {
       if (pinBuffer.length < 4) {
@@ -365,7 +462,7 @@
     function submitPin() {
       if (pinBuffer.length !== 4) return;
       const state = window.store.getState();
-      const racer = state.racers.find(r => r.pin === pinBuffer);
+      const racer = (state.racers || []).find(r => r.pin === pinBuffer);
       if (!racer) {
         document.getElementById('authError').classList.remove('hidden');
         window.sfx.beep(180, 'square', 0.2, 0.2);
@@ -391,18 +488,38 @@
 
     function renderGarage() {
       const state = window.store.getState();
-      const racer = state.racers.find(r => r.id === activeRacerId);
+      const racer = (state.racers || []).find(r => r.id === activeRacerId);
       if (!racer) return;
 
       const calc = window.store.getRacerCalculations(racer);
 
       document.getElementById('driverName').textContent = racer.name;
-      document.getElementById('driverCarIcon').textContent = racer.car;
-      document.getElementById('driverCarIcon').style.borderColor = racer.color;
-      document.getElementById('driverCarBadge').textContent = racer.carName;
+      document.getElementById('driverCarBadge').textContent = racer.carName || 'Formula 1 Team';
       document.getElementById('driverCredits').textContent = calc.availableCredits;
 
-      // Render Dynamic KPIs
+      // 1. Render Dynamic Visual Car
+      const visualStage = document.getElementById('carVisualStage');
+      visualStage.innerHTML = generateF1CarSVG(racer.color || '#dc2626', racer.upgrades || {}, 2.2, false);
+
+      // 2. Render Spec Badges
+      const badgesEl = document.getElementById('carVisualSpecBadges');
+      const up = racer.upgrades || {};
+      badgesEl.innerHTML = `
+        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+          ⚡ Engine: <b class="text-white">${up.topSpeed || 0}/4</b>
+        </span>
+        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+          🪽 Aero Wing: <b class="text-white">${up.aero || 0}/4</b>
+        </span>
+        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+          🛞 Slicks: <b class="text-white">${up.handling || 0}/4</b>
+        </span>
+        <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+          🔋 ERS Boost: <b class="text-white">${up.nos || 0}/4</b>
+        </span>
+      `;
+
+      // 3. Render KPIs
       const statsGrid = document.getElementById('kpiStatsGrid');
       statsGrid.innerHTML = '';
       (state.rules || []).forEach(rule => {
@@ -417,12 +534,10 @@
         statsGrid.appendChild(div);
       });
 
-      // Render Dynamic Parts
+      // 4. Render Dynamic F1 Parts Bench
       const shopEl = document.getElementById('tuningShopGrid');
       shopEl.innerHTML = '';
-
-      const parts = state.parts || [];
-      parts.forEach(part => {
+      (state.parts || []).forEach(part => {
         const lvl = (racer.upgrades && racer.upgrades[part.id]) || 0;
         const isMax = lvl >= 4;
         const nextCost = isMax ? null : part.costs[lvl];
@@ -438,7 +553,7 @@
         card.innerHTML = `
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-2xl">${part.icon}</span>
+              <span class="text-3xl">${part.icon}</span>
               <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-300">${TIERS[lvl]}</span>
             </div>
             <div class="font-bold text-white text-sm">${part.name}</div>
@@ -447,10 +562,10 @@
           </div>
           <div>
             ${isMax ? `
-              <div class="w-full py-2 bg-slate-800 text-slate-400 text-center font-bold text-xs rounded-lg">MAX LEVEL</div>
+              <div class="w-full py-2 bg-slate-800 text-emerald-400 text-center font-black text-xs rounded-lg">MAX SPEC</div>
             ` : `
-              <button onclick="buyUpgrade('${part.id}', ${nextCost})" class="w-full py-2 ${canAfford ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-500 cursor-not-allowed font-bold'} text-xs rounded-lg transition active:scale-95 flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-arrow-up"></i> Install (${nextCost} 🪙)
+              <button onclick="buyUpgrade('${part.id}', ${nextCost})" class="w-full py-2 ${canAfford ? 'bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black' : 'bg-slate-800 text-slate-500 cursor-not-allowed font-bold'} text-xs rounded-lg transition active:scale-95 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-wrench"></i> Install Upgrade (${nextCost} 🪙)
               </button>
             `}
           </div>
@@ -461,7 +576,7 @@
 
     function buyUpgrade(partId, cost) {
       const state = window.store.getState();
-      const racer = state.racers.find(r => r.id === activeRacerId);
+      const racer = (state.racers || []).find(r => r.id === activeRacerId);
       const calc = window.store.getRacerCalculations(racer);
       if (!racer || calc.availableCredits < cost) return;
 
@@ -470,16 +585,15 @@
       racer.upgrades[partId] = (racer.upgrades[partId] || 0) + 1;
 
       window.sfx.turbo();
-      confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
+      confetti({ particleCount: 40, spread: 70, origin: { y: 0.7 } });
       window.store.saveLocal();
       renderGarage();
     }
 
     function openCarCustomizer() {
       const state = window.store.getState();
-      const racer = state.racers.find(r => r.id === activeRacerId);
-      document.getElementById('editCarSelect').value = racer.car;
-      document.getElementById('editCarColor').value = racer.color;
+      const racer = (state.racers || []).find(r => r.id === activeRacerId);
+      document.getElementById('editCarColor').value = racer.color || '#dc2626';
       document.getElementById('customizerModal').classList.remove('hidden');
     }
     function closeCarCustomizer() {
@@ -487,10 +601,9 @@
     }
     function saveCarCustomization() {
       const state = window.store.getState();
-      const racer = state.racers.find(r => r.id === activeRacerId);
+      const racer = (state.racers || []).find(r => r.id === activeRacerId);
       const sel = document.getElementById('editCarSelect');
-      racer.car = sel.value;
-      racer.carName = sel.options[sel.selectedIndex].text.split(' ').slice(1).join(' ');
+      racer.carName = sel.options[sel.selectedIndex].text.split('(')[0].trim();
       racer.color = document.getElementById('editCarColor').value;
       window.store.saveLocal();
       closeCarCustomizer();
@@ -514,8 +627,8 @@
           name: name,
           pin: pin,
           car: '🏎️',
-          carName: 'Redline F1',
-          color: '#ef4444',
+          carName: 'Formula 1 Prototype',
+          color: '#dc2626',
           spentCredits: 0,
           upgrades: {}
         };

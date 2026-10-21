@@ -17,6 +17,80 @@
 
   <!-- Audio Synthesizer -->
   <script>
+    
+    // Visual F1 Car Renderer: Transforms car appearance dynamically based on installed parts!
+    function generateF1CarSVG(color = '#dc2626', upgrades = {}, scale = 1, showFlames = false) {
+      const topSpeedLvl = upgrades.topSpeed || 0;
+      const aeroLvl = upgrades.aero || 0;
+      const tiresLvl = upgrades.handling || 0;
+      const nosLvl = upgrades.nos || 0;
+
+      const tireCompound = tiresLvl >= 3 ? '#ef4444' : (tiresLvl >= 1 ? '#eab308' : '#64748b');
+      const tireWidth = tiresLvl >= 2 ? '14' : '10';
+      const wingHeight = 12 + (aeroLvl * 4);
+      const wingColor = aeroLvl >= 3 ? '#eab308' : (aeroLvl >= 1 ? color : '#334155');
+      const engineGlow = topSpeedLvl >= 3 ? '#f97316' : (topSpeedLvl >= 1 ? '#e2e8f0' : '#475569');
+
+      return `
+        <svg viewBox="0 0 160 60" width="${160 * scale}" height="${60 * scale}" class="inline-block transition-all duration-300">
+          <defs>
+            <linearGradient id="bodyGrad_${color.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${color}" />
+              <stop offset="60%" stop-color="${color}" />
+              <stop offset="100%" stop-color="#0f172a" />
+            </linearGradient>
+            <filter id="ersGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="glow"/>
+              <feComposite in="SourceGraphic" in2="glow" operator="over"/>
+            </filter>
+          </defs>
+
+          <!-- DRS Rear Wing Upgrade -->
+          <g transform="translate(14, ${35 - wingHeight})">
+            <rect x="0" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
+            <rect x="22" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
+            <rect x="2" y="2" width="22" height="4" fill="${wingColor}" rx="1"/>
+            ${aeroLvl >= 2 ? `<rect x="2" y="8" width="22" height="3" fill="#cbd5e1" rx="1"/>` : ''}
+            ${aeroLvl >= 3 ? `<rect x="4" y="0" width="18" height="2" fill="#ef4444" rx="0.5"/>` : ''}
+          </g>
+
+          <!-- Flames & ERS Boost Glow -->
+          ${(showFlames || nosLvl >= 3) ? `
+            <polygon points="10,38 -2,35 6,40 -6,41 4,43 -1,45 10,42" fill="#f59e0b" filter="url(#ersGlow)" class="animate-pulse"/>
+            <polygon points="8,39 1,37 6,40 0,41 6,42 1,44 8,41" fill="#ef4444"/>
+          ` : ''}
+
+          <!-- Suspension -->
+          <line x1="28" y1="36" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
+          <line x1="28" y1="44" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
+
+          <!-- Rear Wheels -->
+          <rect x="22" y="22" width="${tireWidth}" height="32" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="2"/>
+          <line x1="27" y1="28" x2="27" y2="48" stroke="#334155" stroke-width="1.5"/>
+
+          <!-- Body -->
+          <path d="M 36,40 Q 45,30 65,28 L 95,29 Q 120,32 145,40 L 140,43 Q 110,44 75,44 Q 50,45 36,42 Z" fill="url(#bodyGrad_${color.replace('#','')})"/>
+          <path d="M 72,28 Q 80,18 90,26 L 86,28 Z" fill="#020617" stroke="#94a3b8" stroke-width="1.5"/>
+          <circle cx="80" cy="27" r="4.5" fill="#f8fafc" stroke="#dc2626" stroke-width="1"/>
+          <path d="M 66,28 L 74,20 L 78,28 Z" fill="${engineGlow}"/>
+
+          <!-- Front Suspension & Wheels -->
+          <line x1="125" y1="40" x2="135" y2="35" stroke="#475569" stroke-width="2"/>
+          <line x1="125" y1="40" x2="135" y2="45" stroke="#475569" stroke-width="2"/>
+          <rect x="122" y="26" width="${Math.max(8, Number(tireWidth)-2)}" height="26" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="1.8"/>
+
+          <!-- Front Wing -->
+          <polygon points="140,39 158,40 156,43 138,42" fill="${wingColor}"/>
+          <path d="M 148,43 L 160,43 L 158,46 L 146,45 Z" fill="#0f172a"/>
+          ${aeroLvl >= 2 ? `<line x1="152" y1="38" x2="152" y2="45" stroke="#e2e8f0" stroke-width="1.5"/>` : ''}
+
+          ${nosLvl >= 1 ? `
+            <circle cx="58" cy="38" r="${3 + nosLvl}" fill="none" stroke="#38bdf8" stroke-width="1.5" class="ers-glow" stroke-dasharray="2,2"/>
+          ` : ''}
+        </svg>
+      `;
+    }
+
     class SoundFX {
       constructor() { this.ctx = null; this.muted = false; }
       init() {
@@ -99,10 +173,11 @@
     ];
 
     const DEFAULT_PARTS = [
-      { id: 'topSpeed', name: 'Engine / V8', icon: '🚀', stat: 'Top Speed', costs: [100, 250, 450, 750] },
-      { id: 'accel', name: 'Transmission', icon: '⚡', stat: 'Acceleration', costs: [80, 200, 400, 650] },
-      { id: 'handling', name: 'Grip Tires', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
-      { id: 'nos', name: 'Nitrous NOS', icon: '💥', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
+      { id: 'topSpeed', name: 'MGU-K V6 Hybrid Engine', icon: '⚡', stat: 'Top Speed', costs: [100, 250, 450, 750] },
+      { id: 'accel', name: 'Seamless F1 Gearbox', icon: '⚙️', stat: 'Acceleration', costs: [80, 200, 400, 650] },
+      { id: 'handling', name: 'P-Zero Soft Racing Slicks', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
+      { id: 'aero', name: 'DRS Carbon Rear Wing', icon: '🪽', stat: 'Top Speed', costs: [100, 240, 420, 700] },
+      { id: 'nos', name: 'ERS Battery Deploy Boost', icon: '🔋', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
     ];
 
     const DEFAULT_STATE = {
@@ -560,14 +635,14 @@
       (state.racers || []).forEach((racer, idx) => {
         const lane = document.createElement('div');
         lane.className = "relative h-14 bg-slate-900/70 border border-slate-800 rounded-xl overflow-hidden flex items-center px-3";
+        lane.className = "relative h-16 bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden flex items-center px-3";
         lane.innerHTML = `
           <div class="absolute right-0 top-0 bottom-0 w-8 finish-line opacity-30"></div>
-          <div class="absolute left-3 text-[11px] font-bold text-slate-400 z-0">
-            Lane ${idx + 1}: <span class="text-white">${racer.name}</span> (${racer.carName})
+          <div class="absolute left-3 text-[11px] font-mono font-bold text-slate-400 z-0">
+            P${idx + 1}: <span class="text-white font-sans">${racer.name}</span> <span class="text-[10px] text-slate-500">(${racer.carName || 'F1'})</span>
           </div>
-          <div id="car_${racer.id}" class="absolute text-2xl z-10 flex items-center transition-all" style="left: 10px;">
-            <span>${racer.car}</span>
-            <span id="flame_${racer.id}" class="hidden text-sm animate-pulse ml-0.5">🔥</span>
+          <div id="car_${racer.id}" class="absolute z-10 flex items-center transition-all" style="left: 10px;">
+            ${generateF1CarSVG(racer.color || '#dc2626', racer.upgrades || {}, 0.75, false)}
           </div>
         `;
         lanes.appendChild(lane);
