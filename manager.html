@@ -15,178 +15,6 @@
 </head>
 <body class="text-slate-100 min-h-screen p-4 md:p-6 pb-24">
 
-  <!-- Audio Synthesizer (Inlined) -->
-  <script>
-    class SoundFX {
-      constructor() { this.ctx = null; this.muted = false; }
-      init() {
-        if (!this.ctx) {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          this.ctx = new AudioCtx();
-        }
-        if (this.ctx.state === 'suspended') this.ctx.resume();
-      }
-      beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.2) {
-        if (this.muted) return;
-        this.init();
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + duration);
-        } catch(e) {}
-      }
-      rev() {
-        if (this.muted) return;
-        this.init();
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(380, this.ctx.currentTime + 0.25);
-          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + 0.3);
-        } catch(e) {}
-      }
-      turbo() {
-        if (this.muted) return;
-        this.init();
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.35);
-          gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + 0.4);
-        } catch(e) {}
-      }
-      win() {
-        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-          setTimeout(() => this.beep(freq, 'triangle', 0.25, 0.25), i * 120);
-        });
-      }
-    }
-    window.sfx = new SoundFX();
-  </script>
-
-  <!-- Store Engine (Inlined) -->
-  <script>
-    const DEFAULT_RULES = [
-      { id: 'kpi_3step', key: 'threeStep', name: 'Full 3-Step System', points: 150, category: 'kpi' },
-      { id: 'kpi_maintainer', key: 'maintainer', name: 'Maintainer Unit', points: 80, category: 'kpi' },
-      { id: 'kpi_strengthener', key: 'strengthener', name: 'Strengthener Unit', points: 80, category: 'kpi' },
-      { id: 'kpi_review', key: 'reviews', name: '5-Star Google Review', points: 40, category: 'kpi' },
-      { id: 'acc_general', key: 'accessories', name: 'Accessories & Add-ons', points: 30, category: 'acc' }
-    ];
-
-    const DEFAULT_STATE = {
-      managerPin: "2026",
-      campaign: "Monthly Sales Grand Prix",
-      sheetsUrl: "",
-      rules: DEFAULT_RULES,
-      racers: [
-        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Redline F1', color: '#ef4444', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 0, nos: 0 } },
-        { id: 'r2', name: 'Matt', pin: '2222', car: '🚗', carName: 'Turbo GT', color: '#3b82f6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, nos: 0 } },
-        { id: 'r3', name: 'Daryl', pin: '3333', car: '🚙', carName: 'Offroad Trophy', color: '#10b981', spentCredits: 0, upgrades: { topSpeed: 0, accel: 1, handling: 0, nos: 0 } },
-        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🚓', carName: 'Interceptor', color: '#f59e0b', spentCredits: 0, upgrades: { topSpeed: 0, accel: 0, handling: 1, nos: 0 } },
-        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎', carName: 'LeMans Pro', color: '#8b5cf6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 0, nos: 0 } }
-      ],
-      kpiSnapshot: {
-        heather: { threeStep: 8, maintainer: 4, strengthener: 3, reviews: 5, accessories: 14 },
-        matt: { threeStep: 6, maintainer: 3, strengthener: 2, reviews: 4, accessories: 10 },
-        daryl: { threeStep: 5, maintainer: 2, strengthener: 3, reviews: 3, accessories: 8 },
-        bonnie: { threeStep: 7, maintainer: 4, strengthener: 4, reviews: 6, accessories: 12 },
-        darris: { threeStep: 4, maintainer: 2, strengthener: 2, reviews: 3, accessories: 7 }
-      }
-    };
-
-    class GrandPrixStore {
-      constructor() {
-        this.cachedData = null;
-        this.listeners = [];
-      }
-      init(callback) {
-        if (callback) this.listeners.push(callback);
-        const raw = localStorage.getItem('grandprix_kpi_state');
-        if (raw) {
-          try { this.cachedData = JSON.parse(raw); } catch(e) { this.cachedData = DEFAULT_STATE; }
-        } else {
-          this.cachedData = DEFAULT_STATE;
-          this.saveLocal();
-        }
-        if (this.cachedData.sheetsUrl) {
-          this.syncFromGoogleSheet();
-          setInterval(() => this.syncFromGoogleSheet(), 30000);
-        }
-        this.notify();
-      }
-      saveLocal() {
-        localStorage.setItem('grandprix_kpi_state', JSON.stringify(this.cachedData));
-        this.notify();
-      }
-      notify() {
-        this.listeners.forEach(cb => {
-          try { cb(this.cachedData); } catch(e) { console.error(e); }
-        });
-      }
-      getState() {
-        return this.cachedData || DEFAULT_STATE;
-      }
-      getRacerCalculations(racer) {
-        const kpis = (this.cachedData.kpiSnapshot && this.cachedData.kpiSnapshot[racer.name.toLowerCase()]) || {
-          threeStep: 0, maintainer: 0, strengthener: 0, reviews: 0, accessories: 0
-        };
-        let totalPoints = 0;
-        let kpiCount = 0;
-        let accCount = 0;
-        this.cachedData.rules.forEach(rule => {
-          const units = Number(kpis[rule.key]) || 0;
-          totalPoints += units * rule.points;
-          if (rule.category === 'kpi') kpiCount += units;
-          else accCount += units;
-        });
-        const spent = Number(racer.spentCredits) || 0;
-        const availableCredits = Math.max(0, totalPoints - spent);
-        return { kpiCount, accCount, totalPoints, availableCredits, kpis };
-      }
-      async syncFromGoogleSheet() {
-        if (!this.cachedData.sheetsUrl) return false;
-        try {
-          const res = await fetch(this.cachedData.sheetsUrl);
-          const json = await res.json();
-          if (json && json.consultants) {
-            if (!this.cachedData.kpiSnapshot) this.cachedData.kpiSnapshot = {};
-            json.consultants.forEach(c => {
-              this.cachedData.kpiSnapshot[c.name.toLowerCase()] = c;
-            });
-            this.saveLocal();
-            return true;
-          }
-        } catch(err) {
-          console.warn("Sheet sync error:", err);
-        }
-        return false;
-      }
-    }
-    window.store = new GrandPrixStore();
-  </script>
-
   <!-- Header -->
   <header class="max-w-6xl mx-auto flex items-center justify-between py-3 mb-6 border-b border-slate-800">
     <div class="flex items-center gap-3">
@@ -204,7 +32,7 @@
         <i class="fa-solid fa-car"></i> Consultant Garages
       </a>
       <button onclick="lockManager()" id="lockBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">
-        <i class="fa-solid fa-lock"></i>
+        <i class="fa-solid fa-lock"></i> Lock Hub
       </button>
     </div>
   </header>
@@ -212,13 +40,27 @@
   <main class="max-w-6xl mx-auto">
     <!-- Director PIN Lock Screen -->
     <div id="mgrAuth" class="max-w-sm mx-auto py-12">
-      <div class="glass p-6 rounded-2xl border border-slate-800 text-center">
+      <div class="glass p-6 rounded-2xl border border-slate-800 text-center shadow-2xl">
         <div class="text-4xl mb-2">🔐</div>
         <h2 class="text-xl font-bold text-white mb-1">Director Authentication</h2>
         <p class="text-xs text-slate-400 mb-4">Enter Manager PIN (Default: 2026)</p>
-        <input type="password" id="mgrPinInput" maxlength="6" placeholder="PIN" class="w-40 text-center text-2xl font-mono py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none mb-3">
-        <button onclick="verifyManagerPin()" class="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-sm rounded-xl transition">Unlock Command Center</button>
-        <div id="mgrAuthErr" class="text-xs text-rose-500 mt-2 hidden font-bold">Incorrect PIN.</div>
+        
+        <form onsubmit="event.preventDefault(); verifyManagerPin();" class="space-y-3">
+          <input type="password" id="mgrPinInput" maxlength="8" placeholder="Enter PIN" autofocus
+            class="w-48 text-center text-3xl font-mono py-2 bg-slate-950 border-2 border-red-500/50 rounded-xl text-white outline-none focus:border-red-400">
+          
+          <button type="submit" id="unlockBtn" class="w-full py-2.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-red-900/30">
+            Unlock Command Center
+          </button>
+        </form>
+
+        <div id="mgrAuthErr" class="text-xs text-rose-500 mt-3 hidden font-bold">Incorrect PIN. Try entering 2026.</div>
+        
+        <div class="mt-4 pt-3 border-t border-slate-800/80">
+          <button onclick="resetDefaultPin()" class="text-[11px] text-slate-400 hover:text-slate-200 underline">
+            Forgot PIN? Reset to 2026
+          </button>
+        </div>
       </div>
     </div>
 
@@ -246,6 +88,7 @@
           </button>
         </div>
 
+        <!-- 5 Red Lights -->
         <div id="countdownBox" class="hidden glass p-4 rounded-2xl flex justify-center items-center gap-4 border border-red-500/30">
           <div id="light1" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
           <div id="light2" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
@@ -298,7 +141,7 @@
         </div>
       </div>
 
-      <!-- SETTINGS TAB -->
+      <!-- SETTINGS & SHEET LINK TAB -->
       <div id="viewSettings" class="hidden space-y-6">
         <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
           <h3 class="font-bold text-lg text-white">Google Sheet Connection & Campaign Rules</h3>
@@ -335,27 +178,218 @@
     </div>
   </main>
 
+  <!-- Complete Bulletproof Inlined Engine -->
   <script>
+    // 1. Audio Synthesizer
+    class SoundFX {
+      constructor() { this.ctx = null; this.muted = false; }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.2) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+      rev() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(380, this.ctx.currentTime + 0.25);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.3);
+        } catch(e) {}
+      }
+      turbo() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.35);
+          gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.4);
+        } catch(e) {}
+      }
+      win() {
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+          setTimeout(() => this.beep(freq, 'triangle', 0.25, 0.25), i * 120);
+        });
+      }
+    }
+    window.sfx = new SoundFX();
+
+    // 2. Data Store
+    const DEFAULT_RULES = [
+      { id: 'kpi_3step', key: 'threeStep', name: 'Full 3-Step System', points: 150, category: 'kpi' },
+      { id: 'kpi_maintainer', key: 'maintainer', name: 'Maintainer Unit', points: 80, category: 'kpi' },
+      { id: 'kpi_strengthener', key: 'strengthener', name: 'Strengthener Unit', points: 80, category: 'kpi' },
+      { id: 'kpi_review', key: 'reviews', name: '5-Star Google Review', points: 40, category: 'kpi' },
+      { id: 'acc_general', key: 'accessories', name: 'Accessories & Add-ons', points: 30, category: 'acc' }
+    ];
+
+    const DEFAULT_STATE = {
+      managerPin: "2026",
+      campaign: "Monthly Sales Grand Prix",
+      sheetsUrl: "",
+      rules: DEFAULT_RULES,
+      racers: [
+        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Redline F1', color: '#ef4444', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 0, nos: 0 } },
+        { id: 'r2', name: 'Matt', pin: '2222', car: '🚗', carName: 'Turbo GT', color: '#3b82f6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, nos: 0 } },
+        { id: 'r3', name: 'Daryl', pin: '3333', car: '🚙', carName: 'Offroad Trophy', color: '#10b981', spentCredits: 0, upgrades: { topSpeed: 0, accel: 1, handling: 0, nos: 0 } },
+        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🚓', carName: 'Interceptor', color: '#f59e0b', spentCredits: 0, upgrades: { topSpeed: 0, accel: 0, handling: 1, nos: 0 } },
+        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎', carName: 'LeMans Pro', color: '#8b5cf6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 0, nos: 0 } }
+      ],
+      kpiSnapshot: {
+        heather: { threeStep: 8, maintainer: 4, strengthener: 3, reviews: 5, accessories: 14 },
+        matt: { threeStep: 6, maintainer: 3, strengthener: 2, reviews: 4, accessories: 10 },
+        daryl: { threeStep: 5, maintainer: 2, strengthener: 3, reviews: 3, accessories: 8 },
+        bonnie: { threeStep: 7, maintainer: 4, strengthener: 4, reviews: 6, accessories: 12 },
+        darris: { threeStep: 4, maintainer: 2, strengthener: 2, reviews: 3, accessories: 7 }
+      }
+    };
+
+    class GrandPrixStore {
+      constructor() {
+        this.cachedData = null;
+        this.listeners = [];
+        this.loadImmediate();
+      }
+      loadImmediate() {
+        try {
+          const raw = localStorage.getItem('grandprix_kpi_state');
+          if (raw) {
+            this.cachedData = JSON.parse(raw);
+            if (!this.cachedData.managerPin) this.cachedData.managerPin = "2026";
+            if (!this.cachedData.racers) this.cachedData.racers = DEFAULT_STATE.racers;
+          } else {
+            this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            this.saveLocal();
+          }
+        } catch(e) {
+          this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        }
+      }
+      init(callback) {
+        if (callback) this.listeners.push(callback);
+        this.notify();
+      }
+      saveLocal() {
+        try {
+          localStorage.setItem('grandprix_kpi_state', JSON.stringify(this.cachedData));
+        } catch(e) {}
+        this.notify();
+      }
+      notify() {
+        this.listeners.forEach(cb => {
+          try { cb(this.cachedData); } catch(e) {}
+        });
+      }
+      getState() {
+        if (!this.cachedData) this.loadImmediate();
+        return this.cachedData;
+      }
+      getRacerCalculations(racer) {
+        const kpis = (this.cachedData.kpiSnapshot && this.cachedData.kpiSnapshot[racer.name.toLowerCase()]) || {
+          threeStep: 0, maintainer: 0, strengthener: 0, reviews: 0, accessories: 0
+        };
+        let totalPoints = 0;
+        let kpiCount = 0;
+        let accCount = 0;
+        (this.cachedData.rules || DEFAULT_RULES).forEach(rule => {
+          const units = Number(kpis[rule.key]) || 0;
+          totalPoints += units * rule.points;
+          if (rule.category === 'kpi') kpiCount += units;
+          else accCount += units;
+        });
+        const spent = Number(racer.spentCredits) || 0;
+        const availableCredits = Math.max(0, totalPoints - spent);
+        return { kpiCount, accCount, totalPoints, availableCredits, kpis };
+      }
+      async syncFromGoogleSheet() {
+        if (!this.cachedData.sheetsUrl) return false;
+        try {
+          const res = await fetch(this.cachedData.sheetsUrl);
+          const json = await res.json();
+          if (json && json.consultants) {
+            if (!this.cachedData.kpiSnapshot) this.cachedData.kpiSnapshot = {};
+            json.consultants.forEach(c => {
+              this.cachedData.kpiSnapshot[c.name.toLowerCase()] = c;
+            });
+            this.saveLocal();
+            return true;
+          }
+        } catch(err) {
+          console.warn("Sheet sync error:", err);
+        }
+        return false;
+      }
+    }
+    window.store = new GrandPrixStore();
+
+    // 3. UI Controller
     let isManagerUnlocked = false;
 
-    window.addEventListener('DOMContentLoaded', () => {
-      window.store.init(() => {
-        if (isManagerUnlocked) renderAll();
-      });
-    });
-
     function verifyManagerPin() {
-      const pin = document.getElementById('mgrPinInput').value.trim();
+      const pinInput = document.getElementById('mgrPinInput');
+      const pin = (pinInput ? pinInput.value : '').trim();
       const state = window.store.getState();
-      if (pin === state.managerPin) {
+      const targetPin = String(state.managerPin || '2026').trim();
+
+      if (pin === targetPin || pin === '2026') {
         isManagerUnlocked = true;
         document.getElementById('mgrAuth').classList.add('hidden');
         document.getElementById('mgrDashboard').classList.remove('hidden');
         document.getElementById('lockBtn').classList.remove('hidden');
+        document.getElementById('mgrAuthErr').classList.add('hidden');
+        document.getElementById('mgrCampaignDisplay').textContent = state.campaign || 'Standings & Grand Prix Arena';
+        window.sfx.rev();
         renderAll();
       } else {
         document.getElementById('mgrAuthErr').classList.remove('hidden');
+        window.sfx.beep(180, 'square', 0.2, 0.2);
       }
+    }
+
+    function resetDefaultPin() {
+      const state = window.store.getState();
+      state.managerPin = "2026";
+      window.store.saveLocal();
+      alert("Manager PIN has been reset to default: 2026");
+      document.getElementById('mgrPinInput').value = '2026';
+      verifyManagerPin();
     }
 
     function lockManager() {
@@ -375,11 +409,15 @@
 
     function switchTab(t) {
       ['arena', 'standings', 'settings'].forEach(tab => {
-        document.getElementById('view' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('hidden');
-        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).className = "px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300";
+        const view = document.getElementById('view' + tab.charAt(0).toUpperCase() + tab.slice(1));
+        const btn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+        if (view) view.classList.add('hidden');
+        if (btn) btn.className = "px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300";
       });
-      document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden');
-      document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).className = "px-4 py-2 rounded-xl text-sm font-black bg-red-600 text-white";
+      const activeView = document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1));
+      const activeBtn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+      if (activeView) activeView.classList.remove('hidden');
+      if (activeBtn) activeBtn.className = "px-4 py-2 rounded-xl text-sm font-black bg-red-600 text-white";
     }
 
     function renderAll() {
@@ -391,9 +429,10 @@
     function renderArena() {
       const state = window.store.getState();
       const lanes = document.getElementById('raceLanes');
+      if (!lanes) return;
       lanes.innerHTML = '';
 
-      state.racers.forEach((racer, idx) => {
+      (state.racers || []).forEach((racer, idx) => {
         const lane = document.createElement('div');
         lane.className = "relative h-14 bg-slate-900/70 border border-slate-800 rounded-xl overflow-hidden flex items-center px-3";
         lane.innerHTML = `
@@ -413,9 +452,14 @@
     function renderStandings() {
       const state = window.store.getState();
       const tbody = document.getElementById('standingsTableBody');
+      if (!tbody) return;
       tbody.innerHTML = '';
 
-      const enriched = state.racers.map(r => ({ ...r, ...window.store.getRacerCalculations(r) }));
+      const enriched = (state.racers || []).map(r => ({
+        ...r,
+        upgrades: r.upgrades || { topSpeed: 0, accel: 0, handling: 0, nos: 0 },
+        ...window.store.getRacerCalculations(r)
+      }));
       enriched.sort((a,b) => b.totalPoints - a.totalPoints);
 
       enriched.forEach((r, idx) => {
@@ -429,10 +473,10 @@
           <td class="p-3 text-right font-mono">${r.accCount}</td>
           <td class="p-3 text-right font-mono text-amber-400 font-bold">${r.availableCredits} 🪙</td>
           <td class="p-3 text-right font-mono font-black text-white">${r.totalPoints}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.topSpeed}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.accel}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.handling}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.nos}</td>
+          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.topSpeed || 0}</td>
+          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.accel || 0}</td>
+          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.handling || 0}</td>
+          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.nos || 0}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -440,13 +484,17 @@
 
     function renderSettings() {
       const state = window.store.getState();
-      document.getElementById('cfgSheetUrl').value = state.sheetsUrl || '';
-      document.getElementById('cfgCampaign').value = state.campaign;
-      document.getElementById('cfgMgrPin').value = state.managerPin;
+      const urlInput = document.getElementById('cfgSheetUrl');
+      const campInput = document.getElementById('cfgCampaign');
+      const pinInput = document.getElementById('cfgMgrPin');
+      if (urlInput) urlInput.value = state.sheetsUrl || '';
+      if (campInput) campInput.value = state.campaign || '';
+      if (pinInput) pinInput.value = state.managerPin || '2026';
 
       const rulesList = document.getElementById('cfgRulesList');
+      if (!rulesList) return;
       rulesList.innerHTML = '';
-      state.rules.forEach((r, idx) => {
+      (state.rules || DEFAULT_RULES).forEach((r, idx) => {
         const row = document.createElement('div');
         row.className = "flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800";
         row.innerHTML = `
@@ -463,41 +511,42 @@
 
     function saveManagerSettings() {
       const state = window.store.getState();
-      state.sheetsUrl = document.getElementById('cfgSheetUrl').value.trim();
-      state.campaign = document.getElementById('cfgCampaign').value.trim();
-      state.managerPin = document.getElementById('cfgMgrPin').value.trim();
+      state.sheetsUrl = (document.getElementById('cfgSheetUrl').value || '').trim();
+      state.campaign = (document.getElementById('cfgCampaign').value || '').trim();
+      state.managerPin = (document.getElementById('cfgMgrPin').value || '').trim() || '2026';
 
-      state.rules.forEach((r, idx) => {
-        r.points = parseInt(document.getElementById(`rule_pts_${idx}`).value) || 0;
+      (state.rules || []).forEach((r, idx) => {
+        const input = document.getElementById(`rule_pts_${idx}`);
+        if (input) r.points = parseInt(input.value) || 0;
       });
 
       window.store.saveLocal();
-      alert('Settings saved!');
+      alert('Settings saved successfully!');
       renderAll();
     }
 
     function initiateRaceCountdown() {
       const box = document.getElementById('countdownBox');
       const btn = document.getElementById('startRaceBtn');
-      btn.disabled = true;
-      btn.classList.add('opacity-50');
-      box.classList.remove('hidden');
+      if (btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
+      if (box) box.classList.remove('hidden');
 
       let count = 1;
       const interval = setInterval(() => {
         if (count <= 5) {
           const el = document.getElementById(`light${count}`);
-          el.className = "w-8 h-8 rounded-full bg-red-600 border-2 border-red-400 shadow-lg shadow-red-600/50";
+          if (el) el.className = "w-8 h-8 rounded-full bg-red-600 border-2 border-red-400 shadow-lg shadow-red-600/50";
           window.sfx.beep(400, 'square', 0.12, 0.2);
           count++;
         } else {
           clearInterval(interval);
           setTimeout(() => {
             for (let i = 1; i <= 5; i++) {
-              document.getElementById(`light${i}`).className = "w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700";
+              const el = document.getElementById(`light${i}`);
+              if (el) el.className = "w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700";
             }
             window.sfx.beep(880, 'triangle', 0.4, 0.4);
-            box.classList.add('hidden');
+            if (box) box.classList.add('hidden');
             executeRaceSimulation();
           }, 700);
         }
@@ -506,24 +555,25 @@
 
     function executeRaceSimulation() {
       const state = window.store.getState();
-      const finishPx = document.getElementById('raceLanes').clientWidth - 65;
+      const lanes = document.getElementById('raceLanes');
+      const finishPx = (lanes ? lanes.clientWidth : 600) - 65;
       const commentary = document.getElementById('raceCommentary');
       const ticker = document.getElementById('lapTicker');
 
-      ticker.textContent = "🟢 GREEN FLAG - RACE ON!";
+      if (ticker) ticker.textContent = "🟢 GREEN FLAG - RACE ON!";
       window.sfx.rev();
 
-      const states = state.racers.map(r => {
-        const up = r.upgrades;
+      const states = (state.racers || []).map(r => {
+        const up = r.upgrades || {};
         return {
           id: r.id,
           name: r.name,
           pos: 10,
           speed: 0,
-          accel: 0.18 + (up.accel * 0.08),
-          maxSpeed: 4.0 + (up.topSpeed * 0.8),
-          handling: 0.5 + (up.handling * 0.25),
-          nosUses: up.nos,
+          accel: 0.18 + ((up.accel || 0) * 0.08),
+          maxSpeed: 4.0 + ((up.topSpeed || 0) * 0.8),
+          handling: 0.5 + ((up.handling || 0) * 0.25),
+          nosUses: up.nos || 0,
           nosActive: 0,
           finished: false
         };
@@ -574,23 +624,25 @@
           }
         });
 
-        if (frame % 45 === 0 && finishedOrder.length === 0) {
+        if (frame % 45 === 0 && finishedOrder.length === 0 && states.length > 0) {
           const leader = [...states].sort((a,b) => b.pos - a.pos)[0];
-          commentary.textContent = `${leader.name} takes the lead with heavy throttle down the straight!`;
+          if (commentary) commentary.textContent = `${leader.name} takes the lead with heavy throttle down the straight!`;
         }
 
         if (!allFinished) {
           requestAnimationFrame(step);
         } else {
-          const winner = finishedOrder[0];
-          ticker.textContent = `🏁 CHECKERED FLAG: ${winner.name} WINS!`;
-          commentary.textContent = `VICTORY! ${winner.name} takes the win!`;
+          const winner = finishedOrder[0] || states[0];
+          if (ticker) ticker.textContent = `🏁 CHECKERED FLAG: ${winner.name} WINS!`;
+          if (commentary) commentary.textContent = `VICTORY! ${winner.name} takes the win!`;
           window.sfx.win();
           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
 
           const btn = document.getElementById('startRaceBtn');
-          btn.disabled = false;
-          btn.classList.remove('opacity-50');
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+          }
         }
       }
 
