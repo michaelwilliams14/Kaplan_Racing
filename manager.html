@@ -3,94 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sales Grand Prix - Race Director</title>
+  <title>Sales Grand Prix - Race Director & Live Arena</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { background: #070a13; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .finish-line { background: repeating-conic-gradient(#fff 0% 25%, #000 0% 50%) 50% / 12px 12px; }
+    body { background: #07090e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .glass { background: rgba(13, 17, 28, 0.9); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .finish-line { background: repeating-conic-gradient(#fff 0% 25%, #000 0% 50%) 50% / 14px 14px; }
+    .kerb-top { background: repeating-linear-gradient(90deg, #ef4444 0px, #ef4444 20px, #ffffff 20px, #ffffff 40px); }
+    .kerb-bottom { background: repeating-linear-gradient(90deg, #ffffff 0px, #ffffff 20px, #ef4444 20px, #ef4444 40px); }
+    @keyframes pulseGlow { 0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); } 50% { opacity: 1; filter: drop-shadow(0 0 18px rgba(245,158,11,1)); } }
+    .ers-glow { animation: pulseGlow 1.8s infinite; }
+    @keyframes draftLines { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-40px); opacity: 0; } }
+    .drafting { animation: draftLines 0.4s linear infinite; }
+    .asphalt { background: #111622; background-image: radial-gradient(#1e2638 1px, transparent 1px); background-size: 16px 16px; }
   </style>
 </head>
-<body class="text-slate-100 min-h-screen p-4 md:p-6 pb-24">
+<body class="text-slate-100 min-h-screen p-3 md:p-6 pb-24">
 
   <!-- Audio Synthesizer -->
   <script>
-    
-    // Visual F1 Car Renderer: Transforms car appearance dynamically based on installed parts!
-    function generateF1CarSVG(color = '#dc2626', upgrades = {}, scale = 1, showFlames = false) {
-      const topSpeedLvl = upgrades.topSpeed || 0;
-      const aeroLvl = upgrades.aero || 0;
-      const tiresLvl = upgrades.handling || 0;
-      const nosLvl = upgrades.nos || 0;
-
-      const tireCompound = tiresLvl >= 3 ? '#ef4444' : (tiresLvl >= 1 ? '#eab308' : '#64748b');
-      const tireWidth = tiresLvl >= 2 ? '14' : '10';
-      const wingHeight = 12 + (aeroLvl * 4);
-      const wingColor = aeroLvl >= 3 ? '#eab308' : (aeroLvl >= 1 ? color : '#334155');
-      const engineGlow = topSpeedLvl >= 3 ? '#f97316' : (topSpeedLvl >= 1 ? '#e2e8f0' : '#475569');
-
-      return `
-        <svg viewBox="0 0 160 60" width="${160 * scale}" height="${60 * scale}" class="inline-block transition-all duration-300">
-          <defs>
-            <linearGradient id="bodyGrad_${color.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="${color}" />
-              <stop offset="60%" stop-color="${color}" />
-              <stop offset="100%" stop-color="#0f172a" />
-            </linearGradient>
-            <filter id="ersGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="glow"/>
-              <feComposite in="SourceGraphic" in2="glow" operator="over"/>
-            </filter>
-          </defs>
-
-          <!-- DRS Rear Wing Upgrade -->
-          <g transform="translate(14, ${35 - wingHeight})">
-            <rect x="0" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
-            <rect x="22" y="0" width="4" height="${wingHeight + 10}" fill="#0f172a" rx="1"/>
-            <rect x="2" y="2" width="22" height="4" fill="${wingColor}" rx="1"/>
-            ${aeroLvl >= 2 ? `<rect x="2" y="8" width="22" height="3" fill="#cbd5e1" rx="1"/>` : ''}
-            ${aeroLvl >= 3 ? `<rect x="4" y="0" width="18" height="2" fill="#ef4444" rx="0.5"/>` : ''}
-          </g>
-
-          <!-- Flames & ERS Boost Glow -->
-          ${(showFlames || nosLvl >= 3) ? `
-            <polygon points="10,38 -2,35 6,40 -6,41 4,43 -1,45 10,42" fill="#f59e0b" filter="url(#ersGlow)" class="animate-pulse"/>
-            <polygon points="8,39 1,37 6,40 0,41 6,42 1,44 8,41" fill="#ef4444"/>
-          ` : ''}
-
-          <!-- Suspension -->
-          <line x1="28" y1="36" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
-          <line x1="28" y1="44" x2="38" y2="40" stroke="#475569" stroke-width="2"/>
-
-          <!-- Rear Wheels -->
-          <rect x="22" y="22" width="${tireWidth}" height="32" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="2"/>
-          <line x1="27" y1="28" x2="27" y2="48" stroke="#334155" stroke-width="1.5"/>
-
-          <!-- Body -->
-          <path d="M 36,40 Q 45,30 65,28 L 95,29 Q 120,32 145,40 L 140,43 Q 110,44 75,44 Q 50,45 36,42 Z" fill="url(#bodyGrad_${color.replace('#','')})"/>
-          <path d="M 72,28 Q 80,18 90,26 L 86,28 Z" fill="#020617" stroke="#94a3b8" stroke-width="1.5"/>
-          <circle cx="80" cy="27" r="4.5" fill="#f8fafc" stroke="#dc2626" stroke-width="1"/>
-          <path d="M 66,28 L 74,20 L 78,28 Z" fill="${engineGlow}"/>
-
-          <!-- Front Suspension & Wheels -->
-          <line x1="125" y1="40" x2="135" y2="35" stroke="#475569" stroke-width="2"/>
-          <line x1="125" y1="40" x2="135" y2="45" stroke="#475569" stroke-width="2"/>
-          <rect x="122" y="26" width="${Math.max(8, Number(tireWidth)-2)}" height="26" rx="3" fill="#090d16" stroke="${tireCompound}" stroke-width="1.8"/>
-
-          <!-- Front Wing -->
-          <polygon points="140,39 158,40 156,43 138,42" fill="${wingColor}"/>
-          <path d="M 148,43 L 160,43 L 158,46 L 146,45 Z" fill="#0f172a"/>
-          ${aeroLvl >= 2 ? `<line x1="152" y1="38" x2="152" y2="45" stroke="#e2e8f0" stroke-width="1.5"/>` : ''}
-
-          ${nosLvl >= 1 ? `
-            <circle cx="58" cy="38" r="${3 + nosLvl}" fill="none" stroke="#38bdf8" stroke-width="1.5" class="ers-glow" stroke-dasharray="2,2"/>
-          ` : ''}
-        </svg>
-      `;
-    }
-
     class SoundFX {
       constructor() { this.ctx = null; this.muted = false; }
       init() {
@@ -125,15 +58,38 @@
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(380, this.ctx.currentTime + 0.25);
+          osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(420, this.ctx.currentTime + 0.28);
           gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.32);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
           osc.start();
-          osc.stop(this.ctx.currentTime + 0.3);
+          osc.stop(this.ctx.currentTime + 0.32);
         } catch(e) {}
+      }
+      overtake() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(750, this.ctx.currentTime + 0.2);
+          gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.25);
+        } catch(e) {}
+      }
+      drs() {
+        if (this.muted) return;
+        this.beep(880, 'sine', 0.08, 0.15);
+        setTimeout(() => this.beep(1174, 'sine', 0.1, 0.15), 90);
       }
       turbo() {
         if (this.muted) return;
@@ -143,9 +99,9 @@
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = 'triangle';
-          osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.35);
-          gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+          osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1300, this.ctx.currentTime + 0.35);
+          gain.gain.setValueAtTime(0.22, this.ctx.currentTime);
           gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
@@ -154,12 +110,146 @@
         } catch(e) {}
       }
       win() {
-        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-          setTimeout(() => this.beep(freq, 'triangle', 0.25, 0.25), i * 120);
+        [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, i) => {
+          setTimeout(() => this.beep(freq, 'triangle', 0.3, 0.3), i * 130);
         });
       }
     }
     window.sfx = new SoundFX();
+
+    // Visual F1 Car Renderer
+    
+    // Visual hyper-detailed F1 Car Renderer with 3D gradients, halos, decals, sparks, and exhaust heat blur
+    function generateF1CarSVG(color = '#dc2626', upgrades = {}, scale = 1, showFlames = false) {
+      const topSpeedLvl = upgrades.topSpeed || 0;
+      const aeroLvl = upgrades.aero || 0;
+      const tiresLvl = upgrades.handling || 0;
+      const nosLvl = upgrades.nos || 0;
+
+      const tireCompound = tiresLvl >= 3 ? '#ef4444' : (tiresLvl >= 1 ? '#eab308' : '#475569');
+      const tireWidth = tiresLvl >= 2 ? '14' : '11';
+      const wingHeight = 12 + (aeroLvl * 4);
+      const wingColor = aeroLvl >= 3 ? '#eab308' : (aeroLvl >= 1 ? color : '#1e293b');
+      const engineGlow = topSpeedLvl >= 3 ? '#ff3e00' : (topSpeedLvl >= 1 ? '#cbd5e1' : '#334155');
+
+      return `
+        <svg viewBox="0 0 160 60" width="${160 * scale}" height="${60 * scale}" class="inline-block transition-all duration-300 drop-shadow-lg">
+          <defs>
+            <linearGradient id="bodyGrad_${color.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="20%">
+              <stop offset="0%" stop-color="${color}" />
+              <stop offset="50%" stop-color="${color}" />
+              <stop offset="75%" stop-color="#1e1b4b" />
+              <stop offset="100%" stop-color="#020617" />
+            </linearGradient>
+            <linearGradient id="tireGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#111827" />
+              <stop offset="50%" stop-color="#030712" />
+              <stop offset="100%" stop-color="#111827" />
+            </linearGradient>
+            <pattern id="carbon" width="4" patternTransform="rotate(45 0 0)" height="4" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="4" stroke="#111" stroke-width="1.2" />
+            </pattern>
+            <filter id="ersGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feComponentTransfer in="blur" result="boost">
+                <feFuncA type="linear" slope="1.8"/>
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode in="boost"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <filter id="sparks" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="glow"/>
+              <feMerge>
+                <feMergeNode in="glow"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Shadow -->
+          <ellipse cx="80" cy="48" rx="72" ry="7" fill="rgba(0,0,0,0.48)" />
+
+          <!-- Sparks & Exhaust Drift (Heat/Boost state) -->
+          ${(showFlames || nosLvl >= 2) ? `
+            <!-- Kinetic Ground sparks -->
+            <path d="M 12,46 L -10,48 L 5,45 M 8,46 L -6,47 L 2,45" stroke="#f59e0b" stroke-width="1.8" opacity="0.9" filter="url(#sparks)" stroke-dasharray="2,2"/>
+            <!-- Thermal thrust flame -->
+            <polygon points="12,38 -8,31 -2,38 -14,40 -2,42 -10,47 12,43" fill="#ff4500" opacity="0.85" filter="url(#ersGlow)" class="animate-pulse"/>
+            <polygon points="10,39 -2,34 2,39 -6,40 1,41 -4,45 10,42" fill="#fbbf24" opacity="0.9"/>
+          ` : `
+            <!-- Natural backdraft and track debris kickback -->
+            <path d="M 8,46 L -2,47 L 4,45" stroke="#f59e0b" stroke-width="1.2" opacity="0.3" stroke-dasharray="1,1"/>
+          `}
+
+          <!-- Ground-Effect Vent / Undertray -->
+          <path d="M 28,44 L 128,45 L 120,47 L 35,46 Z" fill="#0f172a" opacity="0.9" />
+
+          <!-- Rear DRS Aerodynamics -->
+          <g transform="translate(11, ${35 - wingHeight})">
+            <!-- Rear wing endplates -->
+            <rect x="0" y="0" width="4" height="${wingHeight + 11}" fill="#0a0f1d" rx="1.5"/>
+            <rect x="25" y="0" width="4" height="${wingHeight + 11}" fill="#0a0f1d" rx="1.5"/>
+            <!-- 3D Rear spoiler wing layers -->
+            <rect x="3" y="1" width="23" height="4" fill="${wingColor}" rx="1"/>
+            <rect x="3" y="7" width="23" height="2" fill="#111" rx="0.5" />
+            <!-- Spoiler sponsorship lettering -->
+            <line x1="5" y1="3" x2="24" y2="3" stroke="#fff" stroke-width="1" stroke-dasharray="2,2" opacity="0.8"/>
+            ${aeroLvl >= 2 ? `<path d="M 3,11 Q 12,13 25,11" stroke="#fbbf24" stroke-width="1.5" />` : ''}
+          </g>
+
+          <!-- Suspension linkages (Rear) -->
+          <line x1="28" y1="35" x2="38" y2="39" stroke="#334155" stroke-width="2.5"/>
+          <line x1="28" y1="43" x2="38" y2="40" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="34" cy="39" r="2" fill="#020617"/>
+
+          <!-- Rear Heavy Tyre (High tread, compound stripe) -->
+          <rect x="20" y="21" width="${tireWidth}" height="32" rx="4.5" fill="url(#tireGrad)" stroke="#111827" stroke-width="1"/>
+          <rect x="20" y="21" width="1.5" height="32" fill="#374151" />
+          <!-- Pirelli Stripe -->
+          <path d="M ${20 + (Number(tireWidth)/2)},21 L ${20 + (Number(tireWidth)/2)},53" stroke="${tireCompound}" stroke-width="2.5" stroke-dasharray="5,2" />
+          <ellipse cx="${20 + Number(tireWidth)/2}" cy="37" rx="3.5" ry="5" fill="#020617" />
+          <circle cx="${20 + Number(tireWidth)/2}" cy="37" r="1.8" fill="#475569" />
+
+          <!-- Main Engine Cover & Exhaust Pipes -->
+          <path d="M 28,40 Q 14,40 12,38 L 12,41 Q 14,43 28,43 Z" fill="#111" />
+          <!-- Detailed Sidepods, Vent, Heat outlets -->
+          <path d="M 36,40 Q 42,28 65,27 L 90,29 Q 115,31 143,40 L 138,44 Q 105,45 75,44 Q 50,45 36,42 Z" fill="url(#bodyGrad_${color.replace('#','')})"/>
+          <!-- Cockpit edge, Halo and aero-strakes -->
+          <path d="M 72,28 Q 78,16 93,25 L 86,28 Z" fill="#090d16" stroke="#475569" stroke-width="1.5"/>
+          <path d="M 72,26 Q 78,18 83,23 Z" fill="none" stroke="#fff" stroke-width="1.8" opacity="0.8" /> <!-- Halo Structure -->
+          <circle cx="80" cy="25" r="4.2" fill="#cbd5e1" stroke="#dc2626" stroke-width="1"/> <!-- Drivers Helmet -->
+
+          <!-- Side Intake sponsors -->
+          <rect x="48" y="34" width="24" height="4" fill="#020617" opacity="0.8" rx="1"/>
+          <text x="50" y="38" fill="#fff" font-size="3" font-family="monospace" font-weight="bold" opacity="0.8">GRAND PRIX</text>
+
+          <!-- Front suspension and camera strakes -->
+          <line x1="124" y1="40" x2="135" y2="34" stroke="#334155" stroke-width="2"/>
+          <line x1="124" y1="40" x2="135" y2="44" stroke="#1e293b" stroke-width="2"/>
+
+          <!-- Front Tyre -->
+          <rect x="120" y="25" width="${Math.max(8, Number(tireWidth)-2.5)}" height="26" rx="3.5" fill="url(#tireGrad)" stroke="#111827" stroke-width="0.8"/>
+          <path d="M ${120 + (Math.max(8, Number(tireWidth)-2.5)/2)},25 L ${120 + (Math.max(8, Number(tireWidth)-2.5)/2)},51" stroke="${tireCompound}" stroke-width="2" stroke-dasharray="4,2" />
+          <ellipse cx="${120 + (Math.max(8, Number(tireWidth)-2.5)/2)}" cy="38" rx="2.5" ry="4" fill="#020617" />
+          <circle cx="${120 + (Math.max(8, Number(tireWidth)-2.5)/2)}" cy="38" r="1.2" fill="#475569" />
+
+          <!-- Front wing assembly (Aero-plates, Endplates) -->
+          <polygon points="138,39 159,40 156,43 135,42" fill="${wingColor}"/>
+          <polygon points="144,43 158,43 156,46 142,45" fill="#0a0f1d" />
+          <!-- Endplate flaps -->
+          <rect x="156" y="36" width="3" height="10" fill="#0a0f1d" rx="0.5" />
+          ${aeroLvl >= 2 ? `<line x1="150" y1="38" x2="150" y2="45" stroke="#fbbf24" stroke-width="1.2" opacity="0.9"/>` : ''}
+
+          <!-- ERS Deploy Indicator Light -->
+          ${nosLvl >= 1 ? `
+            <circle cx="58" cy="36" r="${3.5 + nosLvl}" fill="none" stroke="#38bdf8" stroke-width="1.8" class="ers-glow" stroke-dasharray="2,2"/>
+          ` : ''}
+        </svg>
+      `;
+    }
+
   </script>
 
   <!-- Store Engine -->
@@ -187,11 +277,11 @@
       rules: DEFAULT_RULES,
       parts: DEFAULT_PARTS,
       racers: [
-        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Redline F1', color: '#ef4444', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 0, nos: 0 } },
-        { id: 'r2', name: 'Matt', pin: '2222', car: '🚗', carName: 'Turbo GT', color: '#3b82f6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, nos: 0 } },
-        { id: 'r3', name: 'Daryl', pin: '3333', car: '🚙', carName: 'Offroad Trophy', color: '#10b981', spentCredits: 0, upgrades: { topSpeed: 0, accel: 1, handling: 0, nos: 0 } },
-        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🚓', carName: 'Interceptor', color: '#f59e0b', spentCredits: 0, upgrades: { topSpeed: 0, accel: 0, handling: 1, nos: 0 } },
-        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎', carName: 'LeMans Pro', color: '#8b5cf6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 0, nos: 0 } }
+        { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Scuderia Corsa', color: '#dc2626', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 1, aero: 1, nos: 0 } },
+        { id: 'r2', name: 'Matt', pin: '2222', car: '🏎️', carName: 'Silver Arrow', color: '#06b6d4', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, aero: 0, nos: 0 } },
+        { id: 'r3', name: 'Daryl', pin: '3333', car: '🏎️', carName: 'Papaya Speed', color: '#f97316', spentCredits: 0, upgrades: { topSpeed: 0, accel: 1, handling: 0, aero: 1, nos: 0 } },
+        { id: 'r4', name: 'Bonnie', pin: '4444', car: '🏎️', carName: 'Aston British Racing', color: '#059669', spentCredits: 0, upgrades: { topSpeed: 0, accel: 0, handling: 1, aero: 0, nos: 0 } },
+        { id: 'r5', name: 'Darris', pin: '5555', car: '🏎️', carName: 'Red Bull Prototype', color: '#2563eb', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 0, aero: 0, nos: 0 } }
       ],
       kpiSnapshot: {
         heather: { threeStep: 8, maintainer: 4, strengthener: 3, reviews: 5, accessories: 14 },
@@ -278,7 +368,7 @@
   </script>
 
   <!-- Header -->
-  <header class="max-w-6xl mx-auto flex items-center justify-between py-3 mb-6 border-b border-slate-800">
+  <header class="max-w-7xl mx-auto flex items-center justify-between py-3 mb-6 border-b border-slate-800">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center font-black text-white text-xl shadow-lg">🏁</div>
       <div>
@@ -299,7 +389,7 @@
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto">
+  <main class="max-w-7xl mx-auto">
     <!-- Director PIN Lock Screen -->
     <div id="mgrAuth" class="max-w-sm mx-auto py-12">
       <div class="glass p-6 rounded-2xl border border-slate-800 text-center shadow-2xl">
@@ -336,23 +426,31 @@
         <button onclick="switchTab('settings')" id="tabSettings" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300">⚙️ Google Sheet Link & System</button>
       </div>
 
-      <!-- TAB 1: LIVE ARENA -->
+      <!-- TAB 1: LIVE GRAND PRIX ARENA (MULTI-MINUTE DRAMATIC SIMULATION) -->
       <div id="viewArena" class="space-y-4">
+        
+        <!-- Control Bar -->
         <div class="glass p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-800">
           <div class="flex items-center gap-3">
-            <span class="text-xs font-bold uppercase text-slate-400">Race Format:</span>
-            <select id="raceMode" class="bg-slate-900 border border-slate-700 text-white text-xs font-bold rounded-lg px-3 py-1.5">
-              <option value="drag">Quarter-Mile Drag Strip (High Accel & Nitro)</option>
-              <option value="sprint">1-Lap Sprint (Balanced)</option>
-              <option value="enduro">3-Lap Grand Prix (Top Speed & Handling)</option>
-            </select>
+            <div class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500 font-black text-base">
+              🏆
+            </div>
+            <div>
+              <div class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                Full Championship Grand Prix
+                <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-mono font-bold">8 LAPS • 2.5 MIN</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Full race length with multi-sector overtakes, DRS drafting, and ERS energy battles</div>
+            </div>
           </div>
-          <button onclick="initiateRaceCountdown()" id="startRaceBtn" class="bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-lg transition active:scale-95 flex items-center gap-2">
-            <i class="fa-solid fa-flag-checkered"></i> START RACE
-          </button>
+          <div class="flex items-center gap-3">
+            <button onclick="initiateRaceCountdown()" id="startRaceBtn" class="bg-gradient-to-r from-red-600 via-amber-500 to-red-600 hover:from-red-500 hover:to-amber-400 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-lg transition active:scale-95 flex items-center gap-2">
+              <i class="fa-solid fa-flag-checkered"></i> COMMENCE GRAND PRIX
+            </button>
+          </div>
         </div>
 
-        <!-- 5 Red Lights -->
+        <!-- 5 Red Lights Sequence -->
         <div id="countdownBox" class="hidden glass p-4 rounded-2xl flex justify-center items-center gap-4 border border-red-500/30">
           <div id="light1" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
           <div id="light2" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
@@ -361,18 +459,87 @@
           <div id="light5" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
         </div>
 
-        <div class="glass p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
-          <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-            <span>Grid Start</span>
-            <span id="lapTicker" class="text-amber-400">Ready on the Grid</span>
-            <span>Checkered Finish</span>
-          </div>
-          <div id="raceLanes" class="space-y-3 relative py-2"></div>
-        </div>
 
-        <div class="glass p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div class="text-red-500 animate-pulse font-mono text-xs font-black uppercase">🎙️ Pit Radio:</div>
-          <div id="raceCommentary" class="text-xs text-slate-300 font-medium">Cars on grid. Vehicle stats determined by garage upgrades.</div>
+        <!-- Cinematic Race Preview Card -->
+        <div class="glass rounded-2xl border border-slate-800 overflow-hidden relative mb-4">
+          <div class="h-44 md:h-56 w-full relative">
+            <img src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&q=80&w=1200" alt="Formula 1 Track" class="w-full h-full object-cover brightness-50 contrast-125">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#07090e] via-transparent to-transparent"></div>
+            <div class="absolute bottom-4 left-5">
+              <span class="text-[9px] bg-red-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Live Arena Preview</span>
+              <h2 class="text-xl md:text-2xl font-black text-white tracking-tight mt-1">THE CHAMPIONSHIP GRID IS ALIVE</h2>
+              <p class="text-xs text-slate-300 max-w-lg mt-0.5">Watch live strategy unfold as 5 performance-tuned F1 machines battle wheel-to-wheel down the 2.5-minute Grand Prix route.</p>
+            </div>
+            <div class="absolute top-4 right-5 flex items-center gap-1 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg text-[10px] font-mono text-emerald-400 font-bold">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> 4K PREVIEW CAMERA
+            </div>
+          </div>
+        </div>
+        <!-- Race Arena Split View: Left Timing Tower + Right Track Circuit -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          
+          <!-- F1 Live Timing Tower (P1 -> P5 with live intervals & overtakes) -->
+          <div class="glass p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+                <div class="text-[11px] font-black tracking-widest uppercase text-white flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> LIVE TIMING
+                </div>
+                <span id="lapBadge" class="text-xs font-mono font-black text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">LAP 1/5</span>
+              </div>
+              <div id="timingTowerList" class="space-y-2"></div>
+            </div>
+
+            <!-- Race Sector Map & Weather status -->
+            <div class="mt-4 pt-3 border-t border-slate-800/80 text-[11px] font-mono space-y-1.5">
+              <div class="flex justify-between text-slate-400">
+                <span>Active Sector:</span>
+                <span id="currentSectorLabel" class="text-white font-bold">Sector 1 (Straight)</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>DRS Zone:</span>
+                <span id="drsStatusLabel" class="text-emerald-400 font-bold">ENABLED (Lap 2+)</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Track Temp:</span>
+                <span class="text-amber-400 font-bold">34°C / Dry</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Race Circuit Stage -->
+          <div class="lg:col-span-3 glass p-5 rounded-2xl border border-slate-800 relative flex flex-col justify-between overflow-hidden">
+            <div class="flex justify-between items-center text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-flag-checkered text-amber-400"></i> Circuit Sector 1</span>
+              <span id="lapTicker" class="text-amber-400 font-mono font-black text-xs">READY ON GRID</span>
+              <span>Final Sector 3</span>
+            </div>
+
+            <!-- Asphalt Circuit Container with Kerbs -->
+            <div class="relative rounded-xl overflow-hidden border-2 border-slate-700/60 asphalt shadow-2xl">
+              <!-- Top Kerb -->
+              <div class="h-2 w-full kerb-top"></div>
+
+              <!-- Multi-Lane Asphalt Track -->
+              <div id="raceLanes" class="space-y-2 relative py-4 px-2 min-h-[300px]">
+                <!-- Cars and lanes injected dynamically -->
+              </div>
+
+              <!-- Bottom Kerb -->
+              <div class="h-2 w-full kerb-bottom"></div>
+            </div>
+
+            <!-- Live Pit Radio & Commentary Bar -->
+            <div class="mt-3 bg-slate-950/80 border border-slate-800/90 p-3 rounded-xl flex items-center gap-3">
+              <div class="text-red-500 animate-pulse font-mono text-xs font-black uppercase flex items-center gap-1.5">
+                <i class="fa-solid fa-walkie-talkie"></i> Pit Radio:
+              </div>
+              <div id="raceCommentary" class="text-xs text-slate-200 font-medium truncate flex-1">
+                Drivers forming up on the starting grid. Standing by for 5 red lights sequence.
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -393,7 +560,7 @@
         </div>
       </div>
 
-      <!-- TAB 3: KPI MANAGER (ADD / REMOVE KPIS) -->
+      <!-- TAB 3: KPI MANAGER -->
       <div id="viewKpis" class="hidden space-y-6">
         <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
           <div class="flex items-center justify-between">
@@ -416,7 +583,7 @@
         </div>
       </div>
 
-      <!-- TAB 4: PARTS MANAGER (ADD / REMOVE PARTS) -->
+      <!-- TAB 4: PARTS MANAGER -->
       <div id="viewParts" class="hidden space-y-6">
         <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
           <div class="flex items-center justify-between">
@@ -439,7 +606,7 @@
         </div>
       </div>
 
-      <!-- TAB 5: SETTINGS & SHEET LINK -->
+      <!-- TAB 5: SETTINGS -->
       <div id="viewSettings" class="hidden space-y-6">
         <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
           <h3 class="font-bold text-lg text-white">System & Google Sheet Connection</h3>
@@ -474,6 +641,59 @@
     </div>
   </main>
 
+  <!-- PODIUM AWARDS CEREMONY OVERLAY -->
+  <div id="podiumModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass w-full max-w-2xl p-6 md:p-8 rounded-3xl border border-amber-500/40 text-center space-y-6 shadow-2xl">
+      <div>
+        <span class="text-xs font-black tracking-widest text-amber-400 uppercase bg-amber-400/10 px-3 py-1 rounded-full border border-amber-500/30">Official F1 Podium Results</span>
+        <h2 class="text-3xl md:text-4xl font-black text-white mt-2">GRAND PRIX VICTORY CEREMONY</h2>
+      </div>
+
+      <!-- 3D Podium Columns (P2 | P1 | P3) -->
+      <div class="grid grid-cols-3 gap-2 md:gap-4 items-end pt-4 pb-2">
+        <!-- 2nd Place -->
+        <div class="flex flex-col items-center">
+          <div id="podiumP2Car" class="mb-2"></div>
+          <div class="font-bold text-sm text-slate-200" id="podiumP2Name">Driver 2</div>
+          <div class="text-[10px] text-slate-400 mb-2" id="podiumP2Team">Silver Arrow</div>
+          <div class="w-full h-28 bg-gradient-to-t from-slate-800 to-slate-700 rounded-t-2xl border-t-4 border-slate-300 flex flex-col justify-center items-center">
+            <span class="text-3xl font-black text-slate-200">2</span>
+            <span class="text-[10px] uppercase font-bold text-slate-300">P2 • SILVER</span>
+          </div>
+        </div>
+
+        <!-- 1st Place (Champion) -->
+        <div class="flex flex-col items-center">
+          <div class="text-3xl mb-1 animate-bounce">👑</div>
+          <div id="podiumP1Car" class="mb-2"></div>
+          <div class="font-black text-base md:text-lg text-amber-400" id="podiumP1Name">Driver 1</div>
+          <div class="text-[11px] text-amber-200 font-bold mb-2" id="podiumP1Team">Scuderia F1</div>
+          <div class="w-full h-40 bg-gradient-to-t from-amber-600 via-yellow-500 to-amber-400 rounded-t-2xl border-t-4 border-yellow-200 flex flex-col justify-center items-center shadow-lg shadow-amber-500/30">
+            <span class="text-5xl font-black text-slate-950">1</span>
+            <span class="text-xs uppercase font-black text-slate-950">WINNER • GOLD</span>
+          </div>
+        </div>
+
+        <!-- 3rd Place -->
+        <div class="flex flex-col items-center">
+          <div id="podiumP3Car" class="mb-2"></div>
+          <div class="font-bold text-sm text-slate-200" id="podiumP3Name">Driver 3</div>
+          <div class="text-[10px] text-slate-400 mb-2" id="podiumP3Team">Papaya Speed</div>
+          <div class="w-full h-20 bg-gradient-to-t from-amber-900 to-amber-800 rounded-t-2xl border-t-4 border-amber-600 flex flex-col justify-center items-center">
+            <span class="text-2xl font-black text-amber-200">3</span>
+            <span class="text-[9px] uppercase font-bold text-amber-300">P3 • BRONZE</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-center pt-2">
+        <button onclick="closePodiumModal()" class="px-6 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-sm rounded-xl transition shadow-lg shadow-red-900/30">
+          Return to Grid Paddock
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add KPI Modal -->
   <div id="addKpiModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="glass w-full max-w-md p-6 rounded-2xl border border-slate-800 space-y-4">
@@ -486,7 +706,7 @@
         <input type="text" id="newKpiName" placeholder="e.g. Warranty Protection" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
       </div>
       <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Data Key (Must match Sheet column or lower-case tag)</label>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Data Key</label>
         <input type="text" id="newKpiKey" placeholder="e.g. warranty" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm font-mono">
       </div>
       <div class="grid grid-cols-2 gap-3">
@@ -559,6 +779,7 @@
 
   <script>
     let isManagerUnlocked = false;
+    let raceAnimationId = null;
 
     function verifyManagerPin() {
       const pinInput = document.getElementById('mgrPinInput');
@@ -634,18 +855,47 @@
 
       (state.racers || []).forEach((racer, idx) => {
         const lane = document.createElement('div');
-        lane.className = "relative h-14 bg-slate-900/70 border border-slate-800 rounded-xl overflow-hidden flex items-center px-3";
-        lane.className = "relative h-16 bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden flex items-center px-3";
+        lane.id = `lane_${racer.id}`;
+        lane.className = "relative h-16 border-b border-slate-800/80 flex items-center px-2";
         lane.innerHTML = `
-          <div class="absolute right-0 top-0 bottom-0 w-8 finish-line opacity-30"></div>
-          <div class="absolute left-3 text-[11px] font-mono font-bold text-slate-400 z-0">
-            P${idx + 1}: <span class="text-white font-sans">${racer.name}</span> <span class="text-[10px] text-slate-500">(${racer.carName || 'F1'})</span>
+          <div class="absolute right-0 top-0 bottom-0 w-8 finish-line opacity-25"></div>
+          <div class="absolute left-2 text-[10px] font-mono font-bold text-slate-400 z-0 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-md bg-slate-900 border border-slate-700 flex items-center justify-center text-white" id="gridPos_${racer.id}">P${idx + 1}</span>
+            <span class="text-white">${racer.name}</span>
+            <span class="text-[9px] text-slate-500">(${racer.carName || 'F1'})</span>
           </div>
-          <div id="car_${racer.id}" class="absolute z-10 flex items-center transition-all" style="left: 10px;">
-            ${generateF1CarSVG(racer.color || '#dc2626', racer.upgrades || {}, 0.75, false)}
+          <div id="car_${racer.id}" class="absolute z-10 flex items-center transition-all duration-75" style="left: 10px;">
+            ${generateF1CarSVG(racer.color || '#dc2626', racer.upgrades || {}, 0.72, false)}
           </div>
         `;
         lanes.appendChild(lane);
+      });
+
+      renderTimingTower(state.racers || []);
+    }
+
+    function renderTimingTower(racers) {
+      const towerEl = document.getElementById('timingTowerList');
+      if (!towerEl) return;
+      towerEl.innerHTML = '';
+
+      racers.forEach((r, idx) => {
+        const row = document.createElement('div');
+        row.id = `towerRow_${r.id}`;
+        row.className = "flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-800 transition-all duration-300";
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-md font-mono font-black text-xs flex items-center justify-center ${idx === 0 ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-300'}">
+              ${idx + 1}
+            </span>
+            <div class="w-2.5 h-2.5 rounded-full" style="background-color: ${r.color || '#ef4444'};"></div>
+            <span class="text-xs font-bold text-white truncate max-w-[90px]">${r.name}</span>
+          </div>
+          <div class="text-right font-mono text-[11px]">
+            <span id="interval_${r.id}" class="text-slate-400">${idx === 0 ? 'LEADER' : '+0.0s'}</span>
+          </div>
+        `;
+        towerEl.appendChild(row);
       });
     }
 
@@ -656,11 +906,10 @@
       const tbody = document.getElementById('standingsTableBody');
       if (!tbody || !headRow) return;
 
-      // Dynamic header based on configured parts
       let headHtml = `
         <th class="p-3">Rank</th>
         <th class="p-3">Driver</th>
-        <th class="p-3">Car</th>
+        <th class="p-3">Team Livery</th>
         <th class="p-3 text-right">KPI Count</th>
         <th class="p-3 text-right">Accessories</th>
         <th class="p-3 text-right">Remaining Budget</th>
@@ -685,7 +934,10 @@
         let rowHtml = `
           <td class="p-3 font-bold text-amber-400">#${idx + 1}</td>
           <td class="p-3 font-bold text-white">${r.name}</td>
-          <td class="p-3">${r.car} ${r.carName}</td>
+          <td class="p-3 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full" style="background-color: ${r.color}"></span>
+            ${r.carName}
+          </td>
           <td class="p-3 text-right font-mono">${r.kpiCount}</td>
           <td class="p-3 text-right font-mono">${r.accCount}</td>
           <td class="p-3 text-right font-mono text-amber-400 font-bold">${r.availableCredits} 🪙</td>
@@ -895,8 +1147,9 @@
       renderAll();
     }
 
-    // --- RACE SIMULATION ---
+    // --- 5 RED LIGHTS COUNTDOWN ---
     function initiateRaceCountdown() {
+      if (raceAnimationId) cancelAnimationFrame(raceAnimationId);
       const box = document.getElementById('countdownBox');
       const btn = document.getElementById('startRaceBtn');
       if (btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
@@ -907,7 +1160,7 @@
         if (count <= 5) {
           const el = document.getElementById(`light${count}`);
           if (el) el.className = "w-8 h-8 rounded-full bg-red-600 border-2 border-red-400 shadow-lg shadow-red-600/50";
-          window.sfx.beep(400, 'square', 0.12, 0.2);
+          window.sfx.beep(420, 'square', 0.12, 0.2);
           count++;
         } else {
           clearInterval(interval);
@@ -916,122 +1169,255 @@
               const el = document.getElementById(`light${i}`);
               if (el) el.className = "w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700";
             }
-            window.sfx.beep(880, 'triangle', 0.4, 0.4);
+            window.sfx.beep(920, 'triangle', 0.45, 0.4);
             if (box) box.classList.add('hidden');
-            executeRaceSimulation();
-          }, 700);
+            executeGrandPrixMultiMinuteRace();
+          }, 800);
         }
-      }, 600);
+      }, 700);
     }
 
-    function executeRaceSimulation() {
+    // --- MULTI-MINUTE DYNAMIC GRAND PRIX SIMULATION WITH DRAFTING & OVERTAKES ---
+    function executeGrandPrixMultiMinuteRace() {
       const state = window.store.getState();
-      const lanes = document.getElementById('raceLanes');
-      const finishPx = (lanes ? lanes.clientWidth : 600) - 65;
       const commentary = document.getElementById('raceCommentary');
       const ticker = document.getElementById('lapTicker');
+      const lapBadge = document.getElementById('lapBadge');
+      const sectorLabel = document.getElementById('currentSectorLabel');
+      const lanesContainer = document.getElementById('raceLanes');
 
-      if (ticker) ticker.textContent = "🟢 GREEN FLAG - RACE ON!";
+      // Locked to Full Championship Grand Prix (8 Laps, ~2.5 Minutes)
+      const totalLaps = 8;
+      const targetSeconds = 150; // 2.5 minutes of wheel-to-wheel racing!
+
+      const trackWidth = (lanesContainer ? lanesContainer.clientWidth : 750) - 130;
+      const fps = 60;
+      const totalFrames = targetSeconds * fps;
+      const framesPerLap = totalFrames / totalLaps;
+
+      ticker.textContent = "🟢 LIGHTS OUT AND AWAY WE GO!";
       window.sfx.rev();
 
-      // Dynamically calculate speed, acceleration, handling, and nos boost based on all active parts
-      const states = (state.racers || []).map(r => {
+      // Initialize Driver Telemetry and State
+      const drivers = (state.racers || []).map((r, i) => {
         const up = r.upgrades || {};
         let topSpeedBonus = 0;
         let accelBonus = 0;
         let handlingBonus = 0;
-        let nosBoosts = 0;
+        let nosBonus = 0;
 
         (state.parts || []).forEach(p => {
           const lvl = up[p.id] || 0;
-          if (p.stat === 'Top Speed') topSpeedBonus += lvl * 0.8;
-          else if (p.stat === 'Acceleration') accelBonus += lvl * 0.08;
-          else if (p.stat === 'Handling') handlingBonus += lvl * 0.25;
-          else if (p.stat === 'Boost Bursts') nosBoosts += lvl;
+          if (p.stat === 'Top Speed') topSpeedBonus += lvl * 0.45;
+          else if (p.stat === 'Acceleration') accelBonus += lvl * 0.4;
+          else if (p.stat === 'Handling') handlingBonus += lvl * 0.35;
+          else if (p.stat === 'Boost Bursts') nosBonus += lvl * 1.5;
         });
+
+        // Base race pace score calculated from upgrades
+        const overallScore = (topSpeedBonus * 1.2) + (accelBonus * 1.0) + (handlingBonus * 1.1) + (nosBonus * 0.8);
 
         return {
           id: r.id,
           name: r.name,
-          pos: 10,
-          speed: 0,
-          accel: 0.18 + accelBonus,
-          maxSpeed: 4.0 + topSpeedBonus,
-          handling: 0.5 + handlingBonus,
-          nosUses: nosBoosts,
-          nosActive: 0,
+          carName: r.carName || 'Formula 1',
+          color: r.color || '#dc2626',
+          upgrades: up,
+          basePace: 1.0 + (overallScore * 0.08),
+          topSpeedBonus,
+          accelBonus,
+          handlingBonus,
+          distance: i * 8, // slight staggered start grid
+          currentLap: 1,
+          laneY: 0, // dynamic vertical weaving for overtakes
+          ersCooldown: 0,
+          drsActive: false,
+          previousRank: i + 1,
           finished: false
         };
       });
 
-      let finishedOrder = [];
-      let frame = 0;
+      let currentFrame = 0;
+      let lastOvertakeAnnounce = 0;
 
-      function step() {
-        frame++;
-        let allFinished = true;
+      function simulateStep() {
+        currentFrame++;
+        const currentLap = Math.min(totalLaps, Math.floor(currentFrame / framesPerLap) + 1);
+        const lapProgress = (currentFrame % framesPerLap) / framesPerLap; // 0 to 1
 
-        states.forEach(st => {
-          if (st.finished) return;
-          allFinished = false;
+        // Update Lap Counter and Sector Tracker
+        if (lapBadge) lapBadge.textContent = `LAP ${currentLap}/${totalLaps}`;
+        let sector = 1;
+        if (lapProgress > 0.66) { sector = 3; if (sectorLabel) sectorLabel.textContent = "Sector 3 (Hairpin & Launch)"; }
+        else if (lapProgress > 0.33) { sector = 2; if (sectorLabel) sectorLabel.textContent = "Sector 2 (Technical Chicanes)"; }
+        else { sector = 1; if (sectorLabel) sectorLabel.textContent = "Sector 1 (High-Speed Straight)"; }
 
-          if (st.nosUses > 0 && st.nosActive <= 0 && Math.random() < 0.015) {
-            st.nosUses--;
-            st.nosActive = 40;
-            window.sfx.turbo();
-            const flame = document.getElementById(`flame_${st.id}`);
-            if (flame) flame.classList.remove('hidden');
+        if (currentLap === totalLaps && ticker) {
+          ticker.textContent = "🏁 FINAL LAP! BATTLE FOR THE VICTORY!";
+        }
+
+        // Advance Each Driver based on current sector mechanics & upgrades
+        drivers.forEach(d => {
+          if (d.finished) return;
+
+          let stepSpeed = d.basePace;
+
+          // Sector 1: Top Speed & DRS Dominate
+          if (sector === 1) {
+            stepSpeed += d.topSpeedBonus * 0.12;
+          } 
+          // Sector 2: Handling & Downforce Dominate
+          else if (sector === 2) {
+            stepSpeed += d.handlingBonus * 0.15;
+          } 
+          // Sector 3: Acceleration & Gearbox Dominate
+          else if (sector === 3) {
+            stepSpeed += d.accelBonus * 0.14;
           }
 
-          let currentAccel = st.accel;
-          let currentMax = st.maxSpeed;
+          // Random natural tire wear and driver rhythm variance
+          const variance = (Math.sin(currentFrame * 0.05 + d.id.charCodeAt(0)) * 0.12);
+          stepSpeed += variance;
 
-          if (st.nosActive > 0) {
-            st.nosActive--;
-            currentAccel *= 2.2;
-            currentMax *= 1.4;
-            if (st.nosActive === 0) {
-              const flame = document.getElementById(`flame_${st.id}`);
-              if (flame) flame.classList.add('hidden');
+          // Check for Slipstream & DRS (When trailing behind another car)
+          d.drsActive = false;
+          drivers.forEach(other => {
+            if (other.id !== d.id && other.distance > d.distance && (other.distance - d.distance) < 35 && (other.distance - d.distance) > 5) {
+              // In slipstream range!
+              stepSpeed += 0.35;
+              if (currentLap >= 2 && sector === 1) {
+                d.drsActive = true;
+                stepSpeed += 0.45; // Huge DRS speed delta!
+              }
             }
+          });
+
+          // Strategic ERS Battery Boost deployment
+          if (d.ersCooldown <= 0 && Math.random() < 0.008) {
+            d.ersCooldown = 90; // Active for 90 frames (~1.5s)
+            window.sfx.turbo();
           }
 
-          const jitter = (Math.random() - 0.48) * (1.2 - Math.min(1.0, st.handling * 0.4));
-          if (st.speed < currentMax) st.speed += currentAccel;
-          st.pos += Math.max(0.5, st.speed + jitter);
+          if (d.ersCooldown > 0) {
+            d.ersCooldown--;
+            stepSpeed += 0.75; // Electric boost launch!
+          }
 
-          const carEl = document.getElementById(`car_${st.id}`);
-          if (carEl) carEl.style.left = `${Math.min(st.pos, finishPx)}px`;
+          d.distance += Math.max(0.4, stepSpeed);
 
-          if (st.pos >= finishPx) {
-            st.finished = true;
-            finishedOrder.push(st);
+          // Calculate visual track position (looping across screen per lap)
+          const lapDistTotal = (framesPerLap * 1.5);
+          const posInLap = (d.distance % lapDistTotal) / lapDistTotal;
+          const pixelX = 10 + (posInLap * trackWidth);
+
+          // Weave vertically slightly during intense overtakes
+          if (d.drsActive || d.ersCooldown > 30) {
+            d.laneY = Math.sin(currentFrame * 0.2) * 5;
+          } else {
+            d.laneY *= 0.9;
+          }
+
+          // Move Car Element on Track
+          const carEl = document.getElementById(`car_${d.id}`);
+          if (carEl) {
+            carEl.style.left = `${pixelX}px`;
+            carEl.style.transform = `translateY(${d.laneY}px)`;
+          }
+
+          // Check for Finish on final lap
+          if (currentFrame >= totalFrames) {
+            d.finished = true;
           }
         });
 
-        if (frame % 45 === 0 && finishedOrder.length === 0 && states.length > 0) {
-          const leader = [...states].sort((a,b) => b.pos - a.pos)[0];
-          if (commentary) commentary.textContent = `${leader.name} takes the lead with heavy throttle down the straight!`;
-        }
+        // Real-Time Sort & Ranking Order
+        const sorted = [...drivers].sort((a,b) => b.distance - a.distance);
 
-        if (!allFinished) {
-          requestAnimationFrame(step);
+        // Update Timing Tower & Check for Dramatic Overtakes
+        sorted.forEach((d, rankIdx) => {
+          const rank = rankIdx + 1;
+          const badge = document.getElementById(`gridPos_${d.id}`);
+          if (badge) badge.textContent = `P${rank}`;
+
+          // Interval to leader
+          const intervalEl = document.getElementById(`interval_${d.id}`);
+          if (intervalEl) {
+            if (rank === 1) intervalEl.innerHTML = `<span class="text-emerald-400 font-bold">P1 LEADER</span>`;
+            else {
+              const gapSec = ((sorted[0].distance - d.distance) * 0.04).toFixed(2);
+              intervalEl.textContent = `+${gapSec}s`;
+            }
+          }
+
+          // Announce Lead Changes and Key Overtakes
+          if (d.previousRank !== rank) {
+            if (rank < d.previousRank && (currentFrame - lastOvertakeAnnounce) > 100) {
+              lastOvertakeAnnounce = currentFrame;
+              window.sfx.overtake();
+              if (commentary) {
+                if (rank === 1) {
+                  commentary.innerHTML = `<span class="text-amber-400 font-bold">🚨 LEAD CHANGE!</span> <b>${d.name}</b> powers into P1 down the inside!`;
+                } else {
+                  commentary.innerHTML = `<span class="text-emerald-400 font-bold">⚡ OVERTAKE!</span> <b>${d.name}</b> moves up into P${rank} with superior pace!`;
+                }
+              }
+            }
+            d.previousRank = rank;
+          }
+        });
+
+        // Loop animation or trigger finish
+        if (currentFrame < totalFrames) {
+          raceAnimationId = requestAnimationFrame(simulateStep);
         } else {
-          const winner = finishedOrder[0] || states[0];
-          if (ticker) ticker.textContent = `🏁 CHECKERED FLAG: ${winner.name} WINS!`;
-          if (commentary) commentary.textContent = `VICTORY! ${winner.name} takes the win!`;
+          // RACE FINISHED - TRIGGER DRAMATIC VICTORY CEREMONY
+          const winner = sorted[0];
+          const p2 = sorted[1] || sorted[0];
+          const p3 = sorted[2] || sorted[0];
+
+          if (ticker) ticker.textContent = `🏁 CHECKERED FLAG: ${winner.name} WINS THE GRAND PRIX!`;
+          if (commentary) commentary.innerHTML = `🏆 <b>${winner.name}</b> takes the checkered flag for a sensational victory!`;
           window.sfx.win();
-          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+          confetti({ particleCount: 160, spread: 100, origin: { y: 0.5 } });
+
+          // Show Podium Awards Ceremony
+          setTimeout(() => {
+            showPodiumCeremony(sorted);
+          }, 1200);
 
           const btn = document.getElementById('startRaceBtn');
-          if (btn) {
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
-          }
+          if (btn) { btn.disabled = false; btn.classList.remove('opacity-50'); }
         }
       }
 
-      requestAnimationFrame(step);
+      raceAnimationId = requestAnimationFrame(simulateStep);
+    }
+
+    function showPodiumCeremony(sortedDrivers) {
+      const modal = document.getElementById('podiumModal');
+      const p1 = sortedDrivers[0];
+      const p2 = sortedDrivers[1] || p1;
+      const p3 = sortedDrivers[2] || p1;
+
+      document.getElementById('podiumP1Name').textContent = p1.name;
+      document.getElementById('podiumP1Team').textContent = p1.carName;
+      document.getElementById('podiumP1Car').innerHTML = generateF1CarSVG(p1.color, p1.upgrades, 1.1, true);
+
+      document.getElementById('podiumP2Name').textContent = p2.name;
+      document.getElementById('podiumP2Team').textContent = p2.carName;
+      document.getElementById('podiumP2Car').innerHTML = generateF1CarSVG(p2.color, p2.upgrades, 0.85, false);
+
+      document.getElementById('podiumP3Name').textContent = p3.name;
+      document.getElementById('podiumP3Team').textContent = p3.carName;
+      document.getElementById('podiumP3Car').innerHTML = generateF1CarSVG(p3.color, p3.upgrades, 0.8, false);
+
+      modal.classList.remove('hidden');
+      confetti({ particleCount: 180, spread: 120, origin: { y: 0.4 } });
+    }
+
+    function closePodiumModal() {
+      document.getElementById('podiumModal').classList.add('hidden');
+      renderArena();
     }
   </script>
 </body>
