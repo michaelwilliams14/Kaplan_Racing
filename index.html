@@ -14,20 +14,21 @@
 </head>
 <body class="text-slate-100 min-h-screen p-3 md:p-6 pb-20">
 
-  <!-- Audio Synthesizer (Inlined) -->
+  <!-- Audio Synthesizer -->
   <script>
     class SoundFX {
       constructor() { this.ctx = null; this.muted = false; }
       init() {
         if (!this.ctx) {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          this.ctx = new AudioCtx();
+          if (AudioCtx) this.ctx = new AudioCtx();
         }
-        if (this.ctx.state === 'suspended') this.ctx.resume();
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
       }
       beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.2) {
         if (this.muted) return;
         this.init();
+        if (!this.ctx) return;
         try {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
@@ -44,6 +45,7 @@
       rev() {
         if (this.muted) return;
         this.init();
+        if (!this.ctx) return;
         try {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
@@ -61,6 +63,7 @@
       turbo() {
         if (this.muted) return;
         this.init();
+        if (!this.ctx) return;
         try {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
@@ -84,7 +87,7 @@
     window.sfx = new SoundFX();
   </script>
 
-  <!-- Store Engine (Inlined) -->
+  <!-- Store Engine -->
   <script>
     const DEFAULT_RULES = [
       { id: 'kpi_3step', key: 'threeStep', name: 'Full 3-Step System', points: 150, category: 'kpi' },
@@ -94,11 +97,19 @@
       { id: 'acc_general', key: 'accessories', name: 'Accessories & Add-ons', points: 30, category: 'acc' }
     ];
 
+    const DEFAULT_PARTS = [
+      { id: 'topSpeed', name: 'Engine / V8', icon: '🚀', stat: 'Top Speed', costs: [100, 250, 450, 750] },
+      { id: 'accel', name: 'Transmission', icon: '⚡', stat: 'Acceleration', costs: [80, 200, 400, 650] },
+      { id: 'handling', name: 'Grip Tires', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
+      { id: 'nos', name: 'Nitrous NOS', icon: '💥', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
+    ];
+
     const DEFAULT_STATE = {
       managerPin: "2026",
       campaign: "Monthly Sales Grand Prix",
       sheetsUrl: "",
       rules: DEFAULT_RULES,
+      parts: DEFAULT_PARTS,
       racers: [
         { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Redline F1', color: '#ef4444', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 0, nos: 0 } },
         { id: 'r2', name: 'Matt', pin: '2222', car: '🚗', carName: 'Turbo GT', color: '#3b82f6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, nos: 0 } },
@@ -119,42 +130,46 @@
       constructor() {
         this.cachedData = null;
         this.listeners = [];
+        this.loadImmediate();
       }
-      init(callback) {
-        if (callback) this.listeners.push(callback);
-        const raw = localStorage.getItem('grandprix_kpi_state');
-        if (raw) {
-          try { this.cachedData = JSON.parse(raw); } catch(e) { this.cachedData = DEFAULT_STATE; }
-        } else {
-          this.cachedData = DEFAULT_STATE;
-          this.saveLocal();
+      loadImmediate() {
+        try {
+          const raw = localStorage.getItem('grandprix_kpi_state');
+          if (raw) {
+            this.cachedData = JSON.parse(raw);
+            if (!this.cachedData.managerPin) this.cachedData.managerPin = "2026";
+            if (!this.cachedData.rules || this.cachedData.rules.length === 0) this.cachedData.rules = DEFAULT_RULES;
+            if (!this.cachedData.parts || this.cachedData.parts.length === 0) this.cachedData.parts = DEFAULT_PARTS;
+            if (!this.cachedData.racers) this.cachedData.racers = DEFAULT_STATE.racers;
+          } else {
+            this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            this.saveLocal();
+          }
+        } catch(e) {
+          this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
         }
-        if (this.cachedData.sheetsUrl) {
-          this.syncFromGoogleSheet();
-          setInterval(() => this.syncFromGoogleSheet(), 30000);
-        }
-        this.notify();
       }
       saveLocal() {
-        localStorage.setItem('grandprix_kpi_state', JSON.stringify(this.cachedData));
+        try {
+          localStorage.setItem('grandprix_kpi_state', JSON.stringify(this.cachedData));
+        } catch(e) {}
         this.notify();
       }
       notify() {
         this.listeners.forEach(cb => {
-          try { cb(this.cachedData); } catch(e) { console.error(e); }
+          try { cb(this.cachedData); } catch(e) {}
         });
       }
       getState() {
-        return this.cachedData || DEFAULT_STATE;
+        if (!this.cachedData) this.loadImmediate();
+        return this.cachedData;
       }
       getRacerCalculations(racer) {
-        const kpis = (this.cachedData.kpiSnapshot && this.cachedData.kpiSnapshot[racer.name.toLowerCase()]) || {
-          threeStep: 0, maintainer: 0, strengthener: 0, reviews: 0, accessories: 0
-        };
+        const kpis = (this.cachedData.kpiSnapshot && this.cachedData.kpiSnapshot[racer.name.toLowerCase()]) || {};
         let totalPoints = 0;
         let kpiCount = 0;
         let accCount = 0;
-        this.cachedData.rules.forEach(rule => {
+        (this.cachedData.rules || DEFAULT_RULES).forEach(rule => {
           const units = Number(kpis[rule.key]) || 0;
           totalPoints += units * rule.points;
           if (rule.category === 'kpi') kpiCount += units;
@@ -163,24 +178,6 @@
         const spent = Number(racer.spentCredits) || 0;
         const availableCredits = Math.max(0, totalPoints - spent);
         return { kpiCount, accCount, totalPoints, availableCredits, kpis };
-      }
-      async syncFromGoogleSheet() {
-        if (!this.cachedData.sheetsUrl) return false;
-        try {
-          const res = await fetch(this.cachedData.sheetsUrl);
-          const json = await res.json();
-          if (json && json.consultants) {
-            if (!this.cachedData.kpiSnapshot) this.cachedData.kpiSnapshot = {};
-            json.consultants.forEach(c => {
-              this.cachedData.kpiSnapshot[c.name.toLowerCase()] = c;
-            });
-            this.saveLocal();
-            return true;
-          }
-        } catch(err) {
-          console.warn("Sheet sync error:", err);
-        }
-        return false;
       }
     }
     window.store = new GrandPrixStore();
@@ -277,18 +274,18 @@
         </div>
       </div>
 
-      <!-- KPI Summary Cards -->
+      <!-- KPI Summary Cards (Dynamic) -->
       <div class="glass p-5 rounded-2xl border border-slate-800">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
             <i class="fa-solid fa-table-cells text-emerald-400"></i> Your Store Sales & KPI Record (From Sheet)
           </h3>
-          <span class="text-[11px] text-slate-400" id="syncStatus">Live Synced</span>
+          <span class="text-[11px] text-slate-400">Live Synced</span>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center" id="kpiStatsGrid"></div>
       </div>
 
-      <!-- Performance Upgrades Bench -->
+      <!-- Performance Upgrades Bench (Dynamic from Manager Parts Bay) -->
       <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
         <div>
           <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
@@ -341,7 +338,6 @@
         <label class="block text-xs font-bold text-slate-400 mb-1">Set 4-Digit Garage PIN</label>
         <input type="password" id="regPin" maxlength="4" placeholder="4 digits" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm font-mono tracking-widest">
       </div>
-      <div id="regError" class="text-xs text-rose-500 font-bold hidden"></div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeRegisterModal()" class="px-4 py-2 text-xs text-slate-400">Cancel</button>
         <button onclick="submitRegister()" class="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 font-bold text-white rounded-xl">Save & Enter Garage</button>
@@ -352,21 +348,7 @@
   <script>
     let activeRacerId = null;
     let pinBuffer = '';
-
-    const PART_SPECS = {
-      topSpeed: { name: 'Engine / V8', icon: '🚀', stat: 'Top Speed', costs: [100, 250, 450, 750] },
-      accel:    { name: 'Transmission', icon: '⚡', stat: 'Acceleration', costs: [80, 200, 400, 650] },
-      handling: { name: 'Grip Tires', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
-      nos:      { name: 'Nitrous NOS', icon: '💥', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
-    };
     const TIERS = ['Stock', 'Sport', 'Pro', 'Super', 'Hyper'];
-
-    window.addEventListener('DOMContentLoaded', () => {
-      window.store.init((state) => {
-        document.getElementById('campaignName').textContent = state.campaign || 'Driver Garage';
-        if (activeRacerId) renderGarage();
-      });
-    });
 
     function pressKey(n) {
       if (pinBuffer.length < 4) {
@@ -420,32 +402,28 @@
       document.getElementById('driverCarBadge').textContent = racer.carName;
       document.getElementById('driverCredits').textContent = calc.availableCredits;
 
+      // Render Dynamic KPIs
       const statsGrid = document.getElementById('kpiStatsGrid');
-      statsGrid.innerHTML = `
-        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-          <div class="text-[10px] uppercase font-bold text-slate-400">Full 3-Step</div>
-          <div class="text-xl font-black text-red-400">${calc.kpis.threeStep || 0}</div>
-        </div>
-        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-          <div class="text-[10px] uppercase font-bold text-slate-400">Maintainers</div>
-          <div class="text-xl font-black text-amber-400">${calc.kpis.maintainer || 0}</div>
-        </div>
-        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-          <div class="text-[10px] uppercase font-bold text-slate-400">Strengtheners</div>
-          <div class="text-xl font-black text-blue-400">${calc.kpis.strengthener || 0}</div>
-        </div>
-        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-          <div class="text-[10px] uppercase font-bold text-slate-400">Accessories</div>
-          <div class="text-xl font-black text-emerald-400">${calc.kpis.accessories || 0}</div>
-        </div>
-      `;
+      statsGrid.innerHTML = '';
+      (state.rules || []).forEach(rule => {
+        const units = calc.kpis[rule.key] || 0;
+        const div = document.createElement('div');
+        div.className = "bg-slate-950 p-2.5 rounded-xl border border-slate-800";
+        div.innerHTML = `
+          <div class="text-[10px] uppercase font-bold text-slate-400 truncate">${rule.name}</div>
+          <div class="text-xl font-black ${rule.category === 'kpi' ? 'text-red-400' : 'text-blue-400'}">${units}</div>
+          <div class="text-[9px] text-amber-400/80 mt-0.5">+${rule.points} pts/ea</div>
+        `;
+        statsGrid.appendChild(div);
+      });
 
+      // Render Dynamic Parts
       const shopEl = document.getElementById('tuningShopGrid');
       shopEl.innerHTML = '';
 
-      Object.keys(PART_SPECS).forEach(key => {
-        const part = PART_SPECS[key];
-        const lvl = racer.upgrades[key] || 0;
+      const parts = state.parts || [];
+      parts.forEach(part => {
+        const lvl = (racer.upgrades && racer.upgrades[part.id]) || 0;
         const isMax = lvl >= 4;
         const nextCost = isMax ? null : part.costs[lvl];
         const canAfford = !isMax && calc.availableCredits >= nextCost;
@@ -471,7 +449,7 @@
             ${isMax ? `
               <div class="w-full py-2 bg-slate-800 text-slate-400 text-center font-bold text-xs rounded-lg">MAX LEVEL</div>
             ` : `
-              <button onclick="buyUpgrade('${key}', ${nextCost})" class="w-full py-2 ${canAfford ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-500 cursor-not-allowed font-bold'} text-xs rounded-lg transition active:scale-95 flex items-center justify-center gap-1.5">
+              <button onclick="buyUpgrade('${part.id}', ${nextCost})" class="w-full py-2 ${canAfford ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-500 cursor-not-allowed font-bold'} text-xs rounded-lg transition active:scale-95 flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-arrow-up"></i> Install (${nextCost} 🪙)
               </button>
             `}
@@ -481,19 +459,20 @@
       });
     }
 
-    function buyUpgrade(partKey, cost) {
+    function buyUpgrade(partId, cost) {
       const state = window.store.getState();
       const racer = state.racers.find(r => r.id === activeRacerId);
       const calc = window.store.getRacerCalculations(racer);
       if (!racer || calc.availableCredits < cost) return;
 
       racer.spentCredits = (racer.spentCredits || 0) + cost;
-      if (!racer.upgrades[partKey]) racer.upgrades[partKey] = 0;
-      racer.upgrades[partKey] += 1;
+      if (!racer.upgrades) racer.upgrades = {};
+      racer.upgrades[partId] = (racer.upgrades[partId] || 0) + 1;
 
       window.sfx.turbo();
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
       window.store.saveLocal();
+      renderGarage();
     }
 
     function openCarCustomizer() {
@@ -515,6 +494,7 @@
       racer.color = document.getElementById('editCarColor').value;
       window.store.saveLocal();
       closeCarCustomizer();
+      renderGarage();
     }
 
     function showRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
@@ -537,7 +517,7 @@
           carName: 'Redline F1',
           color: '#ef4444',
           spentCredits: 0,
-          upgrades: { topSpeed: 0, accel: 0, handling: 0, nos: 0 }
+          upgrades: {}
         };
         state.racers.push(racer);
       }

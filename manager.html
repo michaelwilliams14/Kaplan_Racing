@@ -15,172 +15,8 @@
 </head>
 <body class="text-slate-100 min-h-screen p-4 md:p-6 pb-24">
 
-  <!-- Header -->
-  <header class="max-w-6xl mx-auto flex items-center justify-between py-3 mb-6 border-b border-slate-800">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center font-black text-white text-xl shadow-lg">🏁</div>
-      <div>
-        <h1 class="font-extrabold text-xl tracking-tight text-white">RACE DIRECTOR <span class="text-amber-400">COMMAND</span></h1>
-        <p class="text-xs text-slate-400" id="mgrCampaignDisplay">Standings & Grand Prix Arena</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <button onclick="triggerManualSync()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
-        <i class="fa-solid fa-arrows-rotate"></i> Pull Sheet KPIs
-      </button>
-      <a href="./index.html" class="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition">
-        <i class="fa-solid fa-car"></i> Consultant Garages
-      </a>
-      <button onclick="lockManager()" id="lockBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">
-        <i class="fa-solid fa-lock"></i> Lock Hub
-      </button>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto">
-    <!-- Director PIN Lock Screen -->
-    <div id="mgrAuth" class="max-w-sm mx-auto py-12">
-      <div class="glass p-6 rounded-2xl border border-slate-800 text-center shadow-2xl">
-        <div class="text-4xl mb-2">🔐</div>
-        <h2 class="text-xl font-bold text-white mb-1">Director Authentication</h2>
-        <p class="text-xs text-slate-400 mb-4">Enter Manager PIN (Default: 2026)</p>
-        
-        <form onsubmit="event.preventDefault(); verifyManagerPin();" class="space-y-3">
-          <input type="password" id="mgrPinInput" maxlength="8" placeholder="Enter PIN" autofocus
-            class="w-48 text-center text-3xl font-mono py-2 bg-slate-950 border-2 border-red-500/50 rounded-xl text-white outline-none focus:border-red-400">
-          
-          <button type="submit" id="unlockBtn" class="w-full py-2.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-red-900/30">
-            Unlock Command Center
-          </button>
-        </form>
-
-        <div id="mgrAuthErr" class="text-xs text-rose-500 mt-3 hidden font-bold">Incorrect PIN. Try entering 2026.</div>
-        
-        <div class="mt-4 pt-3 border-t border-slate-800/80">
-          <button onclick="resetDefaultPin()" class="text-[11px] text-slate-400 hover:text-slate-200 underline">
-            Forgot PIN? Reset to 2026
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Manager Main Screen -->
-    <div id="mgrDashboard" class="hidden space-y-6">
-      <div class="flex gap-2 border-b border-slate-800 pb-2">
-        <button onclick="switchTab('arena')" id="tabArena" class="px-4 py-2 rounded-xl text-sm font-black bg-red-600 text-white">🏁 Grand Prix Race Arena</button>
-        <button onclick="switchTab('standings')" id="tabStandings" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300">📊 Team Standings & Car Telemetry</button>
-        <button onclick="switchTab('settings')" id="tabSettings" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300">⚙️ Sheet Link & Point Values</button>
-      </div>
-
-      <!-- ARENA TAB -->
-      <div id="viewArena" class="space-y-4">
-        <div class="glass p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-800">
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-bold uppercase text-slate-400">Race Format:</span>
-            <select id="raceMode" class="bg-slate-900 border border-slate-700 text-white text-xs font-bold rounded-lg px-3 py-1.5">
-              <option value="drag">Quarter-Mile Drag Strip (High Accel & Nitro)</option>
-              <option value="sprint">1-Lap Sprint (Balanced)</option>
-              <option value="enduro">3-Lap Grand Prix (Top Speed & Handling)</option>
-            </select>
-          </div>
-          <button onclick="initiateRaceCountdown()" id="startRaceBtn" class="bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-lg transition active:scale-95 flex items-center gap-2">
-            <i class="fa-solid fa-flag-checkered"></i> START RACE
-          </button>
-        </div>
-
-        <!-- 5 Red Lights -->
-        <div id="countdownBox" class="hidden glass p-4 rounded-2xl flex justify-center items-center gap-4 border border-red-500/30">
-          <div id="light1" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
-          <div id="light2" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
-          <div id="light3" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
-          <div id="light4" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
-          <div id="light5" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
-        </div>
-
-        <div class="glass p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
-          <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-            <span>Grid Start</span>
-            <span id="lapTicker" class="text-amber-400">Ready on the Grid</span>
-            <span>Checkered Finish</span>
-          </div>
-          <div id="raceLanes" class="space-y-3 relative py-2"></div>
-        </div>
-
-        <div class="glass p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div class="text-red-500 animate-pulse font-mono text-xs font-black uppercase">🎙️ Pit Radio:</div>
-          <div id="raceCommentary" class="text-xs text-slate-300 font-medium">Cars on grid. Vehicle stats determined by garage upgrades.</div>
-        </div>
-      </div>
-
-      <!-- STANDINGS TAB -->
-      <div id="viewStandings" class="hidden space-y-4">
-        <div class="glass rounded-2xl border border-slate-800 overflow-hidden">
-          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h3 class="font-bold text-white text-base">Standings & Consultant Garage Upgrades</h3>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-slate-900/80 text-slate-400 uppercase font-bold border-b border-slate-800">
-                <tr>
-                  <th class="p-3">Rank</th>
-                  <th class="p-3">Driver</th>
-                  <th class="p-3">Car</th>
-                  <th class="p-3 text-right">KPI Count</th>
-                  <th class="p-3 text-right">Accessories</th>
-                  <th class="p-3 text-right">Remaining Budget</th>
-                  <th class="p-3 text-right">Total Points</th>
-                  <th class="p-3 text-center">Engine (Speed)</th>
-                  <th class="p-3 text-center">Trans (Accel)</th>
-                  <th class="p-3 text-center">Tires (Grip)</th>
-                  <th class="p-3 text-center">NOS (Boost)</th>
-                </tr>
-              </thead>
-              <tbody id="standingsTableBody" class="divide-y divide-slate-800/60 font-medium"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- SETTINGS & SHEET LINK TAB -->
-      <div id="viewSettings" class="hidden space-y-6">
-        <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
-          <h3 class="font-bold text-lg text-white">Google Sheet Connection & Campaign Rules</h3>
-
-          <div>
-            <label class="block text-xs font-bold text-emerald-400 mb-1">Google Sheet Apps Script Web App URL</label>
-            <input type="text" id="cfgSheetUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono">
-            <p class="text-[11px] text-slate-400 mt-1">Fetches consultant sales figures automatically. Does NOT alter cars or upgrades.</p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-400 mb-1">Campaign Title</label>
-              <input type="text" id="cfgCampaign" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-400 mb-1">Manager Access PIN</label>
-              <input type="password" id="cfgMgrPin" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
-            </div>
-          </div>
-
-          <div>
-            <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Points Awarded per Unit</h4>
-            <div id="cfgRulesList" class="space-y-2"></div>
-          </div>
-
-          <div class="border-t border-slate-800 pt-4 flex justify-end">
-            <button onclick="saveManagerSettings()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl">
-              Save Settings
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- Complete Bulletproof Inlined Engine -->
+  <!-- Audio Synthesizer -->
   <script>
-    // 1. Audio Synthesizer
     class SoundFX {
       constructor() { this.ctx = null; this.muted = false; }
       init() {
@@ -250,8 +86,10 @@
       }
     }
     window.sfx = new SoundFX();
+  </script>
 
-    // 2. Data Store
+  <!-- Store Engine -->
+  <script>
     const DEFAULT_RULES = [
       { id: 'kpi_3step', key: 'threeStep', name: 'Full 3-Step System', points: 150, category: 'kpi' },
       { id: 'kpi_maintainer', key: 'maintainer', name: 'Maintainer Unit', points: 80, category: 'kpi' },
@@ -260,11 +98,19 @@
       { id: 'acc_general', key: 'accessories', name: 'Accessories & Add-ons', points: 30, category: 'acc' }
     ];
 
+    const DEFAULT_PARTS = [
+      { id: 'topSpeed', name: 'Engine / V8', icon: '🚀', stat: 'Top Speed', costs: [100, 250, 450, 750] },
+      { id: 'accel', name: 'Transmission', icon: '⚡', stat: 'Acceleration', costs: [80, 200, 400, 650] },
+      { id: 'handling', name: 'Grip Tires', icon: '🛞', stat: 'Handling', costs: [80, 180, 350, 600] },
+      { id: 'nos', name: 'Nitrous NOS', icon: '💥', stat: 'Boost Bursts', costs: [120, 300, 500, 900] }
+    ];
+
     const DEFAULT_STATE = {
       managerPin: "2026",
       campaign: "Monthly Sales Grand Prix",
       sheetsUrl: "",
       rules: DEFAULT_RULES,
+      parts: DEFAULT_PARTS,
       racers: [
         { id: 'r1', name: 'Heather', pin: '1111', car: '🏎️', carName: 'Redline F1', color: '#ef4444', spentCredits: 0, upgrades: { topSpeed: 1, accel: 1, handling: 0, nos: 0 } },
         { id: 'r2', name: 'Matt', pin: '2222', car: '🚗', carName: 'Turbo GT', color: '#3b82f6', spentCredits: 0, upgrades: { topSpeed: 1, accel: 0, handling: 1, nos: 0 } },
@@ -293,6 +139,8 @@
           if (raw) {
             this.cachedData = JSON.parse(raw);
             if (!this.cachedData.managerPin) this.cachedData.managerPin = "2026";
+            if (!this.cachedData.rules || this.cachedData.rules.length === 0) this.cachedData.rules = DEFAULT_RULES;
+            if (!this.cachedData.parts || this.cachedData.parts.length === 0) this.cachedData.parts = DEFAULT_PARTS;
             if (!this.cachedData.racers) this.cachedData.racers = DEFAULT_STATE.racers;
           } else {
             this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -301,10 +149,6 @@
         } catch(e) {
           this.cachedData = JSON.parse(JSON.stringify(DEFAULT_STATE));
         }
-      }
-      init(callback) {
-        if (callback) this.listeners.push(callback);
-        this.notify();
       }
       saveLocal() {
         try {
@@ -322,9 +166,7 @@
         return this.cachedData;
       }
       getRacerCalculations(racer) {
-        const kpis = (this.cachedData.kpiSnapshot && this.cachedData.kpiSnapshot[racer.name.toLowerCase()]) || {
-          threeStep: 0, maintainer: 0, strengthener: 0, reviews: 0, accessories: 0
-        };
+        const kpis = (this.cachedData.kpiSnapshot && this.cachedData.kpiSnapshot[racer.name.toLowerCase()]) || {};
         let totalPoints = 0;
         let kpiCount = 0;
         let accCount = 0;
@@ -358,8 +200,289 @@
       }
     }
     window.store = new GrandPrixStore();
+  </script>
 
-    // 3. UI Controller
+  <!-- Header -->
+  <header class="max-w-6xl mx-auto flex items-center justify-between py-3 mb-6 border-b border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center font-black text-white text-xl shadow-lg">🏁</div>
+      <div>
+        <h1 class="font-extrabold text-xl tracking-tight text-white">RACE DIRECTOR <span class="text-amber-400">COMMAND</span></h1>
+        <p class="text-xs text-slate-400" id="mgrCampaignDisplay">Standings & Grand Prix Arena</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="triggerManualSync()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+        <i class="fa-solid fa-arrows-rotate"></i> Pull Sheet KPIs
+      </button>
+      <a href="./index.html" class="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition">
+        <i class="fa-solid fa-car"></i> Consultant Garages
+      </a>
+      <button onclick="lockManager()" id="lockBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">
+        <i class="fa-solid fa-lock"></i> Lock Hub
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto">
+    <!-- Director PIN Lock Screen -->
+    <div id="mgrAuth" class="max-w-sm mx-auto py-12">
+      <div class="glass p-6 rounded-2xl border border-slate-800 text-center shadow-2xl">
+        <div class="text-4xl mb-2">🔐</div>
+        <h2 class="text-xl font-bold text-white mb-1">Director Authentication</h2>
+        <p class="text-xs text-slate-400 mb-4">Enter Manager PIN (Default: 2026)</p>
+        
+        <form onsubmit="event.preventDefault(); verifyManagerPin();" class="space-y-3">
+          <input type="password" id="mgrPinInput" maxlength="8" placeholder="Enter PIN" autofocus
+            class="w-48 text-center text-3xl font-mono py-2 bg-slate-950 border-2 border-red-500/50 rounded-xl text-white outline-none focus:border-red-400">
+          
+          <button type="submit" id="unlockBtn" class="w-full py-2.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-red-900/30">
+            Unlock Command Center
+          </button>
+        </form>
+
+        <div id="mgrAuthErr" class="text-xs text-rose-500 mt-3 hidden font-bold">Incorrect PIN. Try entering 2026.</div>
+        
+        <div class="mt-4 pt-3 border-t border-slate-800/80">
+          <button onclick="resetDefaultPin()" class="text-[11px] text-slate-400 hover:text-slate-200 underline">
+            Forgot PIN? Reset to 2026
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manager Main Screen -->
+    <div id="mgrDashboard" class="hidden space-y-6">
+      <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-2">
+        <button onclick="switchTab('arena')" id="tabArena" class="px-4 py-2 rounded-xl text-sm font-black bg-red-600 text-white">🏁 Grand Prix Race Arena</button>
+        <button onclick="switchTab('standings')" id="tabStandings" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300">📊 Team Standings & Car Telemetry</button>
+        <button onclick="switchTab('kpis')" id="tabKpis" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300">🎯 KPI & Scoring Manager</button>
+        <button onclick="switchTab('parts')" id="tabParts" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300">🔧 Vehicle Parts & Upgrades Bay</button>
+        <button onclick="switchTab('settings')" id="tabSettings" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-300">⚙️ Google Sheet Link & System</button>
+      </div>
+
+      <!-- TAB 1: LIVE ARENA -->
+      <div id="viewArena" class="space-y-4">
+        <div class="glass p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-800">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold uppercase text-slate-400">Race Format:</span>
+            <select id="raceMode" class="bg-slate-900 border border-slate-700 text-white text-xs font-bold rounded-lg px-3 py-1.5">
+              <option value="drag">Quarter-Mile Drag Strip (High Accel & Nitro)</option>
+              <option value="sprint">1-Lap Sprint (Balanced)</option>
+              <option value="enduro">3-Lap Grand Prix (Top Speed & Handling)</option>
+            </select>
+          </div>
+          <button onclick="initiateRaceCountdown()" id="startRaceBtn" class="bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-lg transition active:scale-95 flex items-center gap-2">
+            <i class="fa-solid fa-flag-checkered"></i> START RACE
+          </button>
+        </div>
+
+        <!-- 5 Red Lights -->
+        <div id="countdownBox" class="hidden glass p-4 rounded-2xl flex justify-center items-center gap-4 border border-red-500/30">
+          <div id="light1" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+          <div id="light2" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+          <div id="light3" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+          <div id="light4" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+          <div id="light5" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+        </div>
+
+        <div class="glass p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
+          <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <span>Grid Start</span>
+            <span id="lapTicker" class="text-amber-400">Ready on the Grid</span>
+            <span>Checkered Finish</span>
+          </div>
+          <div id="raceLanes" class="space-y-3 relative py-2"></div>
+        </div>
+
+        <div class="glass p-3 rounded-xl border border-slate-800 flex items-center gap-3">
+          <div class="text-red-500 animate-pulse font-mono text-xs font-black uppercase">🎙️ Pit Radio:</div>
+          <div id="raceCommentary" class="text-xs text-slate-300 font-medium">Cars on grid. Vehicle stats determined by garage upgrades.</div>
+        </div>
+      </div>
+
+      <!-- TAB 2: STANDINGS -->
+      <div id="viewStandings" class="hidden space-y-4">
+        <div class="glass rounded-2xl border border-slate-800 overflow-hidden">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <h3 class="font-bold text-white text-base">Standings & Consultant Garage Upgrades</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs" id="standingsTable">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase font-bold border-b border-slate-800">
+                <tr id="standingsHeadRow"></tr>
+              </thead>
+              <tbody id="standingsTableBody" class="divide-y divide-slate-800/60 font-medium"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: KPI MANAGER (ADD / REMOVE KPIS) -->
+      <div id="viewKpis" class="hidden space-y-6">
+        <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-lg text-white">Active KPIs & Scoring Standards</h3>
+              <p class="text-xs text-slate-400">Add or remove items tracked for consultant points and tuning credits</p>
+            </div>
+            <button onclick="openAddKpiModal()" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+              <i class="fa-solid fa-plus"></i> Add New KPI
+            </button>
+          </div>
+
+          <div id="kpiManagerList" class="space-y-2"></div>
+
+          <div class="border-t border-slate-800 pt-4 flex justify-end">
+            <button onclick="saveKpiChanges()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl">
+              Save KPI Configurations
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: PARTS MANAGER (ADD / REMOVE PARTS) -->
+      <div id="viewParts" class="hidden space-y-6">
+        <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-lg text-white">Garage Tuning Parts & Components</h3>
+              <p class="text-xs text-slate-400">Configure vehicle components available for consultants to upgrade</p>
+            </div>
+            <button onclick="openAddPartModal()" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1.5">
+              <i class="fa-solid fa-plus"></i> Add New Vehicle Part
+            </button>
+          </div>
+
+          <div id="partsManagerList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+          <div class="border-t border-slate-800 pt-4 flex justify-end">
+            <button onclick="savePartChanges()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl">
+              Save Parts Configuration
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: SETTINGS & SHEET LINK -->
+      <div id="viewSettings" class="hidden space-y-6">
+        <div class="glass p-6 rounded-2xl border border-slate-800 space-y-5">
+          <h3 class="font-bold text-lg text-white">System & Google Sheet Connection</h3>
+
+          <div>
+            <label class="block text-xs font-bold text-emerald-400 mb-1">Google Sheet Apps Script Web App URL</label>
+            <input type="text" id="cfgSheetUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono">
+            <p class="text-[11px] text-slate-400 mt-1">Fetches consultant sales figures automatically. Does NOT alter cars or upgrades.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1">Campaign Title</label>
+              <input type="text" id="cfgCampaign" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1">Manager Access PIN</label>
+              <input type="password" id="cfgMgrPin" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800 pt-4 flex justify-between items-center">
+            <button onclick="resetMonthScores()" class="px-4 py-2 bg-rose-900/40 hover:bg-rose-800/60 text-rose-300 border border-rose-700/50 rounded-xl text-xs font-bold">
+              ⚠️ Start New Month (Reset Credits & Parts)
+            </button>
+            <button onclick="saveManagerSettings()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl">
+              Save System Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add KPI Modal -->
+  <div id="addKpiModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass w-full max-w-md p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white">Add New KPI / Metric</h3>
+        <button onclick="closeAddKpiModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Display Name</label>
+        <input type="text" id="newKpiName" placeholder="e.g. Warranty Protection" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Data Key (Must match Sheet column or lower-case tag)</label>
+        <input type="text" id="newKpiKey" placeholder="e.g. warranty" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm font-mono">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Category</label>
+          <select id="newKpiCat" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+            <option value="kpi">Core KPI</option>
+            <option value="acc">Accessory / Add-on</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Points per Unit</label>
+          <input type="number" id="newKpiPts" value="50" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm font-mono text-right">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAddKpiModal()" class="px-4 py-2 text-xs text-slate-400">Cancel</button>
+        <button onclick="confirmAddKpi()" class="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 font-bold text-white rounded-xl">Add KPI</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Part Modal -->
+  <div id="addPartModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass w-full max-w-md p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white">Add New Vehicle Component</h3>
+        <button onclick="closeAddPartModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="grid grid-cols-4 gap-3">
+        <div class="col-span-3">
+          <label class="block text-xs font-bold text-slate-400 mb-1">Part Name</label>
+          <input type="text" id="newPartName" placeholder="e.g. Aero Wing" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Icon</label>
+          <input type="text" id="newPartIcon" value="🪽" class="w-full text-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Performance Stat</label>
+          <select id="newPartStat" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm">
+            <option value="Handling">Handling</option>
+            <option value="Top Speed">Top Speed</option>
+            <option value="Acceleration">Acceleration</option>
+            <option value="Boost Bursts">Boost Bursts</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Internal Key</label>
+          <input type="text" id="newPartId" placeholder="e.g. wing" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm font-mono">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Costs for Levels 1, 2, 3, 4 (Credits)</label>
+        <div class="grid grid-cols-4 gap-2">
+          <input type="number" id="cost1" value="100" class="bg-slate-950 border border-slate-800 rounded-xl p-2 text-center text-xs text-white">
+          <input type="number" id="cost2" value="250" class="bg-slate-950 border border-slate-800 rounded-xl p-2 text-center text-xs text-white">
+          <input type="number" id="cost3" value="450" class="bg-slate-950 border border-slate-800 rounded-xl p-2 text-center text-xs text-white">
+          <input type="number" id="cost4" value="750" class="bg-slate-950 border border-slate-800 rounded-xl p-2 text-center text-xs text-white">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAddPartModal()" class="px-4 py-2 text-xs text-slate-400">Cancel</button>
+        <button onclick="confirmAddPart()" class="px-4 py-2 text-xs bg-amber-500 hover:bg-amber-400 font-bold text-slate-950 rounded-xl">Add Part</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
     let isManagerUnlocked = false;
 
     function verifyManagerPin() {
@@ -408,7 +531,7 @@
     }
 
     function switchTab(t) {
-      ['arena', 'standings', 'settings'].forEach(tab => {
+      ['arena', 'standings', 'kpis', 'parts', 'settings'].forEach(tab => {
         const view = document.getElementById('view' + tab.charAt(0).toUpperCase() + tab.slice(1));
         const btn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
         if (view) view.classList.add('hidden');
@@ -423,6 +546,8 @@
     function renderAll() {
       renderArena();
       renderStandings();
+      renderKpiManager();
+      renderPartsManager();
       renderSettings();
     }
 
@@ -451,21 +576,38 @@
 
     function renderStandings() {
       const state = window.store.getState();
+      const parts = state.parts || DEFAULT_PARTS;
+      const headRow = document.getElementById('standingsHeadRow');
       const tbody = document.getElementById('standingsTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = '';
+      if (!tbody || !headRow) return;
+
+      // Dynamic header based on configured parts
+      let headHtml = `
+        <th class="p-3">Rank</th>
+        <th class="p-3">Driver</th>
+        <th class="p-3">Car</th>
+        <th class="p-3 text-right">KPI Count</th>
+        <th class="p-3 text-right">Accessories</th>
+        <th class="p-3 text-right">Remaining Budget</th>
+        <th class="p-3 text-right">Total Points</th>
+      `;
+      parts.forEach(p => {
+        headHtml += `<th class="p-3 text-center">${p.icon} ${p.name}</th>`;
+      });
+      headRow.innerHTML = headHtml;
 
       const enriched = (state.racers || []).map(r => ({
         ...r,
-        upgrades: r.upgrades || { topSpeed: 0, accel: 0, handling: 0, nos: 0 },
+        upgrades: r.upgrades || {},
         ...window.store.getRacerCalculations(r)
       }));
       enriched.sort((a,b) => b.totalPoints - a.totalPoints);
 
+      tbody.innerHTML = '';
       enriched.forEach((r, idx) => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-800/40";
-        tr.innerHTML = `
+        let rowHtml = `
           <td class="p-3 font-bold text-amber-400">#${idx + 1}</td>
           <td class="p-3 font-bold text-white">${r.name}</td>
           <td class="p-3">${r.car} ${r.carName}</td>
@@ -473,15 +615,179 @@
           <td class="p-3 text-right font-mono">${r.accCount}</td>
           <td class="p-3 text-right font-mono text-amber-400 font-bold">${r.availableCredits} 🪙</td>
           <td class="p-3 text-right font-mono font-black text-white">${r.totalPoints}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.topSpeed || 0}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.accel || 0}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.handling || 0}</td>
-          <td class="p-3 text-center text-slate-300">Lvl ${r.upgrades.nos || 0}</td>
         `;
+        parts.forEach(p => {
+          const lvl = r.upgrades[p.id] || 0;
+          rowHtml += `<td class="p-3 text-center text-slate-300">Lvl ${lvl}</td>`;
+        });
+        tr.innerHTML = rowHtml;
         tbody.appendChild(tr);
       });
     }
 
+    // --- KPI MANAGER ---
+    function renderKpiManager() {
+      const state = window.store.getState();
+      const list = document.getElementById('kpiManagerList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      (state.rules || []).forEach((rule, idx) => {
+        const row = document.createElement('div');
+        row.className = "flex flex-wrap items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800";
+        row.innerHTML = `
+          <div class="flex-1 min-w-[200px]">
+            <input type="text" value="${rule.name}" id="kpi_name_${idx}" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-sm text-white font-medium outline-none">
+            <span class="text-[10px] text-slate-500 font-mono">Key: ${rule.key}</span>
+          </div>
+          <select id="kpi_cat_${idx}" class="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300">
+            <option value="kpi" ${rule.category === 'kpi' ? 'selected' : ''}>Core KPI</option>
+            <option value="acc" ${rule.category === 'acc' ? 'selected' : ''}>Accessory / Add-on</option>
+          </select>
+          <div class="flex items-center gap-1">
+            <input type="number" value="${rule.points}" id="kpi_pts_${idx}" class="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-400 font-mono text-right outline-none">
+            <span class="text-xs text-slate-400 font-bold">pts</span>
+          </div>
+          <button onclick="removeKpi(${idx})" class="p-1.5 text-rose-400 hover:text-rose-300 text-sm" title="Remove KPI">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function openAddKpiModal() { document.getElementById('addKpiModal').classList.remove('hidden'); }
+    function closeAddKpiModal() { document.getElementById('addKpiModal').classList.add('hidden'); }
+
+    function confirmAddKpi() {
+      const name = document.getElementById('newKpiName').value.trim();
+      const key = document.getElementById('newKpiKey').value.trim().toLowerCase();
+      const category = document.getElementById('newKpiCat').value;
+      const points = parseInt(document.getElementById('newKpiPts').value) || 20;
+
+      if (!name || !key) {
+        alert("Please enter a name and data key.");
+        return;
+      }
+      const state = window.store.getState();
+      if (!state.rules) state.rules = [];
+      state.rules.push({ id: 'kpi_' + Date.now(), name, key, category, points });
+      window.store.saveLocal();
+      closeAddKpiModal();
+      renderAll();
+    }
+
+    function removeKpi(idx) {
+      if (!confirm("Are you sure you want to remove this KPI metric?")) return;
+      const state = window.store.getState();
+      state.rules.splice(idx, 1);
+      window.store.saveLocal();
+      renderAll();
+    }
+
+    function saveKpiChanges() {
+      const state = window.store.getState();
+      state.rules.forEach((rule, idx) => {
+        const nameInput = document.getElementById(`kpi_name_${idx}`);
+        const catSelect = document.getElementById(`kpi_cat_${idx}`);
+        const ptsInput = document.getElementById(`kpi_pts_${idx}`);
+        if (nameInput) rule.name = nameInput.value.trim();
+        if (catSelect) rule.category = catSelect.value;
+        if (ptsInput) rule.points = parseInt(ptsInput.value) || 0;
+      });
+      window.store.saveLocal();
+      alert("KPI changes saved!");
+      renderAll();
+    }
+
+    // --- PARTS MANAGER ---
+    function renderPartsManager() {
+      const state = window.store.getState();
+      const list = document.getElementById('partsManagerList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      (state.parts || []).forEach((part, idx) => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3";
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">${part.icon}</span>
+              <div>
+                <input type="text" value="${part.name}" id="part_name_${idx}" class="bg-slate-900 border border-slate-800 rounded px-2 py-0.5 text-sm text-white font-bold">
+                <div class="text-[10px] text-slate-500 font-mono mt-0.5">${part.stat} (ID: ${part.id})</div>
+              </div>
+            </div>
+            <button onclick="removePart(${idx})" class="text-rose-400 hover:text-rose-300 text-sm" title="Remove Component">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <div>
+            <div class="text-[11px] text-slate-400 font-bold mb-1">Costs (Tiers 1 to 4):</div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <input type="number" value="${part.costs[0]}" id="part_${idx}_c0" class="bg-slate-900 border border-slate-800 rounded p-1 text-center text-xs text-white">
+              <input type="number" value="${part.costs[1]}" id="part_${idx}_c1" class="bg-slate-900 border border-slate-800 rounded p-1 text-center text-xs text-white">
+              <input type="number" value="${part.costs[2]}" id="part_${idx}_c2" class="bg-slate-900 border border-slate-800 rounded p-1 text-center text-xs text-white">
+              <input type="number" value="${part.costs[3]}" id="part_${idx}_c3" class="bg-slate-900 border border-slate-800 rounded p-1 text-center text-xs text-white">
+            </div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function openAddPartModal() { document.getElementById('addPartModal').classList.remove('hidden'); }
+    function closeAddPartModal() { document.getElementById('addPartModal').classList.add('hidden'); }
+
+    function confirmAddPart() {
+      const name = document.getElementById('newPartName').value.trim();
+      const icon = document.getElementById('newPartIcon').value.trim() || '🔧';
+      const stat = document.getElementById('newPartStat').value;
+      let id = document.getElementById('newPartId').value.trim().toLowerCase();
+      if (!id) id = 'part_' + Date.now();
+
+      const c1 = parseInt(document.getElementById('cost1').value) || 100;
+      const c2 = parseInt(document.getElementById('cost2').value) || 250;
+      const c3 = parseInt(document.getElementById('cost3').value) || 450;
+      const c4 = parseInt(document.getElementById('cost4').value) || 750;
+
+      if (!name) {
+        alert("Please enter a component name.");
+        return;
+      }
+      const state = window.store.getState();
+      if (!state.parts) state.parts = [];
+      state.parts.push({ id, name, icon, stat, costs: [c1, c2, c3, c4] });
+      window.store.saveLocal();
+      closeAddPartModal();
+      renderAll();
+    }
+
+    function removePart(idx) {
+      if (!confirm("Are you sure you want to remove this vehicle component from the tuning shop?")) return;
+      const state = window.store.getState();
+      state.parts.splice(idx, 1);
+      window.store.saveLocal();
+      renderAll();
+    }
+
+    function savePartChanges() {
+      const state = window.store.getState();
+      state.parts.forEach((part, idx) => {
+        const nameInput = document.getElementById(`part_name_${idx}`);
+        if (nameInput) part.name = nameInput.value.trim();
+        for (let i = 0; i < 4; i++) {
+          const costInput = document.getElementById(`part_${idx}_c${i}`);
+          if (costInput) part.costs[i] = parseInt(costInput.value) || 100;
+        }
+      });
+      window.store.saveLocal();
+      alert("Parts configurations saved!");
+      renderAll();
+    }
+
+    // --- SYSTEM SETTINGS ---
     function renderSettings() {
       const state = window.store.getState();
       const urlInput = document.getElementById('cfgSheetUrl');
@@ -490,23 +796,6 @@
       if (urlInput) urlInput.value = state.sheetsUrl || '';
       if (campInput) campInput.value = state.campaign || '';
       if (pinInput) pinInput.value = state.managerPin || '2026';
-
-      const rulesList = document.getElementById('cfgRulesList');
-      if (!rulesList) return;
-      rulesList.innerHTML = '';
-      (state.rules || DEFAULT_RULES).forEach((r, idx) => {
-        const row = document.createElement('div');
-        row.className = "flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800";
-        row.innerHTML = `
-          <span class="flex-1 text-sm text-white font-medium">${r.name}</span>
-          <span class="text-xs text-slate-400 uppercase font-bold">${r.category}</span>
-          <div class="flex items-center gap-1">
-            <input type="number" value="${r.points}" id="rule_pts_${idx}" class="w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-400 font-mono text-right outline-none">
-            <span class="text-xs text-slate-400 font-bold">pts</span>
-          </div>
-        `;
-        rulesList.appendChild(row);
-      });
     }
 
     function saveManagerSettings() {
@@ -514,17 +803,24 @@
       state.sheetsUrl = (document.getElementById('cfgSheetUrl').value || '').trim();
       state.campaign = (document.getElementById('cfgCampaign').value || '').trim();
       state.managerPin = (document.getElementById('cfgMgrPin').value || '').trim() || '2026';
-
-      (state.rules || []).forEach((r, idx) => {
-        const input = document.getElementById(`rule_pts_${idx}`);
-        if (input) r.points = parseInt(input.value) || 0;
-      });
-
       window.store.saveLocal();
-      alert('Settings saved successfully!');
+      alert('System settings saved!');
       renderAll();
     }
 
+    function resetMonthScores() {
+      if (!confirm("Reset all spent credits and garage upgrades for a new month?")) return;
+      const state = window.store.getState();
+      (state.racers || []).forEach(r => {
+        r.spentCredits = 0;
+        r.upgrades = {};
+      });
+      window.store.saveLocal();
+      alert("All vehicles reset to factory spec on the starting line.");
+      renderAll();
+    }
+
+    // --- RACE SIMULATION ---
     function initiateRaceCountdown() {
       const box = document.getElementById('countdownBox');
       const btn = document.getElementById('startRaceBtn');
@@ -563,17 +859,31 @@
       if (ticker) ticker.textContent = "🟢 GREEN FLAG - RACE ON!";
       window.sfx.rev();
 
+      // Dynamically calculate speed, acceleration, handling, and nos boost based on all active parts
       const states = (state.racers || []).map(r => {
         const up = r.upgrades || {};
+        let topSpeedBonus = 0;
+        let accelBonus = 0;
+        let handlingBonus = 0;
+        let nosBoosts = 0;
+
+        (state.parts || []).forEach(p => {
+          const lvl = up[p.id] || 0;
+          if (p.stat === 'Top Speed') topSpeedBonus += lvl * 0.8;
+          else if (p.stat === 'Acceleration') accelBonus += lvl * 0.08;
+          else if (p.stat === 'Handling') handlingBonus += lvl * 0.25;
+          else if (p.stat === 'Boost Bursts') nosBoosts += lvl;
+        });
+
         return {
           id: r.id,
           name: r.name,
           pos: 10,
           speed: 0,
-          accel: 0.18 + ((up.accel || 0) * 0.08),
-          maxSpeed: 4.0 + ((up.topSpeed || 0) * 0.8),
-          handling: 0.5 + ((up.handling || 0) * 0.25),
-          nosUses: up.nos || 0,
+          accel: 0.18 + accelBonus,
+          maxSpeed: 4.0 + topSpeedBonus,
+          handling: 0.5 + handlingBonus,
+          nosUses: nosBoosts,
           nosActive: 0,
           finished: false
         };
